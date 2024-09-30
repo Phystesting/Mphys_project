@@ -1,0 +1,14 @@
+.DS_Store
+*.swp
+*.so
+*.pyc
+build/
+dist/
+*egg-info*
+*.png
+*.json
+*.h5
+*.pdf
+*.txt
+scratch/
+wheelhouse
