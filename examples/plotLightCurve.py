@@ -10,7 +10,7 @@ Z = {'jetType':     grb.jet.Gaussian,     # Gaussian jet your discrepancy
 
      'thetaObs':    0.3,   # Viewing angle in radians -known
      'E0':          1.0e53, # Isotropic-equivalent energy in erg
-     'thetaCore':   0.005,    # Half-opening angle in radians
+     'thetaCore':   0.05,    # Half-opening angle in radians
      'thetaWing':   0.4,    # Outer truncation angle
      'n0':          1.0e-3,    # circumburst density in cm^{-3}
      'p':           2.2,    # electron energy distribution index
