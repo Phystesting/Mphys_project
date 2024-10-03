@@ -20,21 +20,6 @@ Z = {'jetType':     grb.jet.Gaussian,     # Gaussian jet your discrepancy
      'd_L':         1.36e26, # Luminosity distance in cm -known
      'z':           0.01}   # redshift -known
      
-Z2 = {'jetType':     grb.jet.Gaussian,     # Gaussian jet your discrepancy
-     'specType':    grb.jet.SimpleSpec,   # Basic Synchrotron Emission Spectrum your discrepancy
-     'counterjet': True,
-
-     'thetaObs':    0.3,   # Viewing angle in radians -known
-     'E0':          1.0e53, # Isotropic-equivalent energy in erg
-     'thetaCore':   0.05,    # Half-opening angle in radians
-     'thetaWing':   0.4,    # Outer truncation angle
-     'n0':          1.0e-3,    # circumburst density in cm^{-3}
-     'p':           2.2,    # electron energy distribution index
-     'epsilon_e':   0.1,    # epsilon_e
-     'epsilon_B':   0.0001,   # epsilon_B
-     'xi_N':        1.0,    # Fraction of electrons accelerated
-     'd_L':         1.36e26, # Luminosity distance in cm -known
-     'z':           0.01}   # redshift -known
 
 # Space time points geometrically, from 10^3 s to 10^7 s
 # Time and Frequencies
@@ -51,7 +36,6 @@ nu[:] = 1.0e18 #x-ray
 # Calculate!
 
 Fnu = grb.fluxDensity(t, nu, **Z)
-Fnu2 = grb.fluxDensity(t, nu, **Z2)
 tday = t * grb.sec2day
 # Write to a file
 
@@ -69,9 +53,8 @@ with open(f'{filename.name}', 'w') as f:
 fig, ax = plt.subplots(1, 1)
 
 ax.plot(tday, Fnu)
-ax.plot(tday, Fnu2)
 
-ax.set(xscale='log', xlabel=r'$t$ (s)',
+ax.set(xscale='log', xlabel=r'$t$ (days)',
        yscale='log', ylabel=r'$F_\nu$[$10^{18}$ Hz] (mJy)')
 
 fig.tight_layout()
