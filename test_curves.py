@@ -6,7 +6,6 @@ import tempfile
 # For convenience, place arguments into a dict.
 Z = {'jetType':     grb.jet.Gaussian,     # Gaussian jet your discrepancy
      'specType':    grb.jet.SimpleSpec,   # Basic Synchrotron Emission Spectrum your discrepancy
-     'counterjet': True,
 
      'thetaObs':    0.3,   # Viewing angle in radians -known
      'E0':          1.0e53, # Isotropic-equivalent energy in erg
