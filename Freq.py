@@ -6,7 +6,7 @@ from scipy.optimize import least_squares
 
 #imbed the flux calcuation within a function
 
-def ag_py(t,thetaObs,thetaCore,thetaWing,n0,p,epsilon_e,epsilon_B,E0):
+def ag_py(nu,thetaObs,thetaCore,thetaWing,n0,p,epsilon_e,epsilon_B,E0):
 	Z = {'jetType':     grb.jet.Gaussian,     # Gaussian jet your discrepancy
 		 'specType':    grb.jet.SimpleSpec,   # Basic Synchrotron Emission Spectrum 
 
@@ -23,10 +23,7 @@ def ag_py(t,thetaObs,thetaCore,thetaWing,n0,p,epsilon_e,epsilon_B,E0):
 		 'z':           0.01}   # redshift -known
 
 	# Calculate flux in a single X-ray band (all times have same frequency)
-	nu = np.empty(t.shape)
-	nu[:] = 1.0e18 #x-ray
-	nu = np.empty(t.shape)
-	nu[:] = 1.0e18 #x-ray
+	t = 1.0 * grb.day2sec  # spectrum at 1 day
 
 	# Calculate!
 
@@ -39,9 +36,11 @@ def fitwrapper(coeffs, *args):
 
 # Space time points geometrically, from 10^3 s to 10^7 s
 # Time and Frequencies
-ta = 1.0e-1 * grb.day2sec
-tb = 1.0e3 * grb.day2sec
-t = np.geomspace(ta, tb, num=100)
+nua = 1.0e0   # Low Frequencies in Hz
+nub = 1.0e20  # High Frequencies in Hz
+
+
+nu = np.geomspace(nua, nub, num=100)
 
 #initial parameter guesses
 thetaObs = 0.4
@@ -61,7 +60,7 @@ guess = [thetaObs,thetaCore,thetaWing,n0,p,epsilon_e,epsilon_B,E0]
 b = ((0.0,0.0,0.0,0.0,1.8,0.0,0.0,51),(np.pi*0.5,0.2,0.4,0.1,3.0,0.1,0.01,54))
 
 # import generated data
-xdata, ydata = np.genfromtxt('./data/test_curve.txt',delimiter=',',skip_header=11, unpack=True)
+xdata, ydata = np.genfromtxt('./spec.txt',delimiter=',',skip_header=2, unpack=True)
 xlog,ylog = np.log(xdata),np.log(ydata)
 
 #locate peak in data
@@ -80,18 +79,19 @@ p = out.x
 
 
 #calculated flux curve based off fitted parameters
-Fnu = ag_py(t,p[0],p[1],p[2],p[3],p[4],p[5],p[6],p[7])
+Fnu = ag_py(nu,p[0],p[1],p[2],p[3],p[4],p[5],p[6],p[7])
 
 print(f'thetaObs: {p[0]}\n thetaCore: {p[1]}\n thetaWing: {p[2]}\n n0: {p[3]}\n p: {p[4]}\n epsilon_e: {p[5]}\n epsilon_B: {p[6]}\n E0: {p[7]}')
 
-tday = t * grb.sec2day
 
 fig, ax = plt.subplots(1, 1)
 
-ax.plot(tday,ylog,'x')
-ax.plot(tday, Fnu)
+ax.plot(nu,ylog,'x')
+ax.plot(nu, Fnu)
 
-ax.set(xscale='log', xlabel=r'$t$ (s)', ylabel=r'$F_\nu$[$10^{18}$ Hz] (mJy)')
+ax.set_xscale('log')
+ax.set_xlabel(r'$\nu$ (Hz)')
+ax.set_ylabel(r'$F_\nu$[1 day] (mJy)')
 
-fig.savefig('datafit.png')
+fig.savefig('freqfit.png')
 plt.close(fig)
