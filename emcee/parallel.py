@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from scipy.optimize import minimize
 import corner
 import os
-from multiprocessing import pool
+from multiprocessing import Pool
 import time
 
 def ag_py(t,thetaObs,thetaCore,thetaWing,n0,p,epsilon_e,epsilon_B,E0):
@@ -90,11 +90,11 @@ def log_probability(theta, x, y, yerr):
 
 pos = soln.x + 1e-4 * np.random.randn(32, 2)
 nwalkers, ndim = pos.shape
-
-sampler = emcee.EnsembleSampler(
-    nwalkers, ndim, log_probability, args=(x, y, yerr)
-)
-sampler.run_mcmc(pos, 10, progress=True);
+with Pool() as pool:
+	sampler = emcee.EnsembleSampler(
+		nwalkers, ndim, log_probability,pool=pool, args=(x, y, yerr)
+	)
+	sampler.run_mcmc(pos, 10, progress=True);
 
 #tau = sampler.get_autocorr_time()
 #print(tau)
