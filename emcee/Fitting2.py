@@ -3,6 +3,10 @@ import matplotlib.pyplot as plt
 import afterglowpy as grb
 from scipy.optimize import curve_fit
 from scipy.optimize import least_squares
+import corner
+import os
+from multiprocessing import Pool
+import emcee
 
 #imbed the flux calcuation within a function
 
@@ -37,11 +41,7 @@ def fitwrapper(coeffs, *args):
     xdata,ydata,prio = args
     return prio*(ag_py(xdata, *coeffs)-ydata)
 
-# Space time points geometrically, from 10^3 s to 10^7 s
-# Time and Frequencies
-ta = 1.0e-1 * grb.day2sec
-tb = 1.0e3 * grb.day2sec
-t = np.geomspace(ta, tb, num=100)
+
 
 #initial parameter guesses
 thetaObs = 0.4
@@ -54,14 +54,14 @@ epsilon_B = 0.001
 E0 = 53
 
 
-guess = [0.1, 0.1, 0.2, 200, 2.2, 0.1, 0.01, 52.0]
+guess = [thetaObs, thetaCore, thetaWing, n0, p, epsilon_e, epsilon_B, E0]
 
 #set bounds for fitting parameters
 
 b = ((0.0,0.0,0.0,0.0,1.8,0.0,0.0,51),(np.pi*0.5,0.2,0.4,1e3,3.0,0.1,0.01,54))
 
 # import generated data
-xdata, ydata = np.genfromtxt('./data/test_curve.txt',delimiter=',',skip_header=11, unpack=True)
+xdata, ydata = np.genfromtxt('../data/test_curve.txt',delimiter=',',skip_header=11, unpack=True)
 xlog,ylog = np.log(xdata),np.log(ydata)
 
 #locate peak in data
@@ -80,18 +80,47 @@ p = out.x
 
 
 #calculated flux curve based off fitted parameters
-Fnu = ag_py(t,p[0],p[1],p[2],p[3],p[4],p[5],p[6],p[7])
+Fnu = ag_py(xdata,p[0],p[1],p[2],p[3],p[4],p[5],p[6],p[7])
 
 print(f'thetaObs: {p[0]}\n thetaCore: {p[1]}\n thetaWing: {p[2]}\n n0: {p[3]}\n p: {p[4]}\n epsilon_e: {p[5]}\n epsilon_B: {p[6]}\n E0: {p[7]}')
 
-tday = t * grb.sec2day
+# Define the log likelihood
+def log_likelihood(coeffs, xdata, ydata, prio):
+    model = ag_py(xdata, *coeffs)
+    return -0.5 * np.sum(prio * (model - ydata)**2)
 
-fig, ax = plt.subplots(1, 1)
+# Define the log prior
+def log_prior(coeffs):
+    thetaObs, thetaCore, thetaWing, n0, p, epsilon_e, epsilon_B, E0 = coeffs
+    if 0.0 < thetaObs < np.pi*0.5 and 0.0 < thetaCore < 0.2 and 0.0 < thetaWing < 0.4 and 0.0 < n0 < 1e3 and 1.8 < p < 3.0 and 0.0 < epsilon_e < 0.1 and 0.0 < epsilon_B < 0.01 and 51.0 < E0 < 54.0:
+        return 0.0
+    return -np.inf
 
-ax.plot(tday,ylog,'x')
-ax.plot(tday, Fnu)
+# Define the log probability function
+def log_probability(coeffs, xdata, ydata, prio):
+    lp = log_prior(coeffs)
+    if not np.isfinite(lp):
+        return -np.inf
+    return lp + log_likelihood(coeffs, xdata, ydata, prio)
 
-ax.set(xscale='log', xlabel=r'$t$ (s)', ylabel=r'$F_\nu$[$10^{18}$ Hz] (mJy)')
+# Initialize walkers
+ndim = len(guess)  # Number of parameters to fit
+nwalkers = 32  # Number of walkers (you can increase this)
 
-fig.savefig('datafit.png')
-plt.close(fig)
+# Initial guess for the walkers (slightly perturbed from the initial guess)
+pos = guess + 1e-4 * np.random.randn(nwalkers, ndim)
+
+# Run the MCMC sampler
+nsteps = 1000  # Number of steps (can increase for more accurate results)
+with Pool() as pool:
+    sampler = emcee.EnsembleSampler(nwalkers, ndim, log_probability,Pool=pool, args=(xdata, ylog, prio))
+    sampler.run_mcmc(pos, nsteps, progress=True)
+
+# Get the chain of samples
+samples = sampler.get_chain(discard=100, thin=15, flat=True)
+
+# Generate corner plot
+fig = corner.corner(samples, labels=["thetaObs", "thetaCore", "thetaWing", "n0", "p", "epsilon_e", "epsilon_B", "E0"],
+                    truths=[thetaObs, thetaCore, thetaWing, n0, p, epsilon_e, epsilon_B, E0])
+plt.savefig('corner_plot.png')
+plt.show()

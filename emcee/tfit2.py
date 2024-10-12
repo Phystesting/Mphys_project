@@ -8,6 +8,7 @@ import os
 from multiprocessing import Pool
 import time
 
+#set up afterglowpy as a function suitable for fitting
 def ag_py(t,thetaObs,thetaCore,thetaWing,n0,p,epsilon_e,epsilon_B,E0):
     Z = {'jetType':     grb.jet.Gaussian,     # Gaussian jet your discrepancy
 		 'specType':    grb.jet.SimpleSpec,   # Basic Synchrotron Emission Spectrum 
@@ -15,11 +16,11 @@ def ag_py(t,thetaObs,thetaCore,thetaWing,n0,p,epsilon_e,epsilon_B,E0):
 		 'thetaObs':    thetaObs,   # Viewing angle in radians -known
 		 'E0':          10**E0, # Isotropic-equivalent energy in erg
 		 'thetaCore':   thetaCore,    # Half-opening angle in radians
-		 'thetaWing':   thetaWing,    # Outer truncation angle
-		 'n0':          n0,    # circumburst density in cm^{-3}
+		 'thetaWing':   thetaCore + (0.4-thetaCore)*thetaWing,    # Outer truncation angle
+		 'n0':          10**n0,    # circumburst density in cm^{-3}
 		 'p':           p,    # electron energy distribution index
-		 'epsilon_e':   epsilon_e,    # epsilon_e
-		 'epsilon_B':   epsilon_B,   # epsilon_B
+		 'epsilon_e':   10**epsilon_e,    # epsilon_e
+		 'epsilon_B':   10**epsilon_B,   # epsilon_B
 		 'xi_N':        1.0,    # Fraction of electrons accelerated
 		 'd_L':         1.36e26, # Luminosity distance in cm -known
 		 'z':           0.01}   # redshift -known
@@ -27,49 +28,50 @@ def ag_py(t,thetaObs,thetaCore,thetaWing,n0,p,epsilon_e,epsilon_B,E0):
 	# Calculate flux in a single X-ray band (all times have same frequency)
     nu = np.empty(t.shape)
     nu[:] = 1.0e18 #x-ray
-    nu = np.empty(t.shape)
-    nu[:] = 1.0e18 #x-ray
 
 	# Calculate!
     return np.log(grb.fluxDensity(t, nu, **Z))
 
-
-# Define the constraint: thetaCore < thetaWing
-def constraint_thetaCore_thetaWing(theta):
-    # theta[2] is thetaCore, theta[3] is thetaWing
-    return theta[3] - theta[2]  # Should be >= 0, i.e., thetaWing >= thetaCore
-
-def log_likelihood(theta, x, y, yerr):
-    E0, thetaObs,thetaCore,thetaWing,n0,p,epsilon_e,epsilon_B = theta
+# define fitting residual
+def residual(theta,x,y):
+    thetaObs,thetaCore,thetaWing,n0,p,epsilon_e,epsilon_B,E0 = theta
+    #print(E0, thetaObs, thetaCore, thetaWing, n0, p, epsilon_e, epsilon_B)
     model = ag_py(x,thetaObs,thetaCore,thetaWing,n0,p,epsilon_e,epsilon_B,E0)
-    sigma2 = yerr**2
-    return -0.5 * np.sum((y - model) ** 2 / sigma2 + np.log(sigma2))
+    if not np.all(np.isfinite(model)):
+        print(E0, thetaObs, thetaCore, thetaWing, n0, p, epsilon_e, epsilon_B)
+        raise ValueError("ag_py returned non-finite values.")
+    #print(sum(((y - model)**2) / abs(model)))
+    return sum(((y - model)**2) / abs(model))
 
+# Import data    
 x, ydata = np.genfromtxt('../data/test_curve.txt',delimiter=',',skip_header=11, unpack=True)
 y = np.log(ydata)
-yerr = y*0.001
+
 
 # Define bounds: E0 > 0 and log(f) unrestricted
-bounds = [(51, 54), (0, np.pi*0.5),(0.0, 0.1), (0.11, np.pi*0.5),(0, 1e3), (2.1, 2.8),(0, 1), (0, 1)]  # 
+bounds = [(0, np.pi*0.5),(0.01, 0.4), (0.0, 1.0),(-4.0, 3.0), (2.1, 2.8),(-4.0, 0.0), (-4.0, 0.0), (51.0, 54.0)] 
 
-
-E0 = 53
-thetaObs = 0.3
-thetaCore = 0.05
-thetaWing = 0.4
-n0 = 1e-3
-p = 2.3
-epsilon_e = 1e-2
-epsilon_B = 1e-4
+# definine inital parameters
+E0 = 54.0
+thetaObs = 0.1
+thetaCore = 0.3
+thetaWing = 0.5
+n0 = -1.0
+p = 2.5
+epsilon_e = -2.0
+epsilon_B = -4.0
 np.random.seed(42)
-nll = lambda *args: -log_likelihood(*args)
-initial = np.array([E0,thetaObs,thetaCore,thetaWing,n0,p,epsilon_e,epsilon_B])
+initial = np.array([thetaObs,thetaCore,thetaWing,n0,p,epsilon_e,epsilon_B,E0])
 
-# Set the constraint as thetaCore < thetaWing
-constraints = {'type': 'ineq', 'fun': constraint_thetaCore_thetaWing}
 
-soln = minimize(nll, initial, args=(x, y, yerr), bounds=bounds)
-E0_ml, thetaObs_ml,thetaCore_ml,thetaWing_ml,n0_ml,p_ml,epsilon_e_ml,epsilon_B_ml = soln.x
+#minimize the residual
+start = time.time()
+soln = minimize(residual, initial, args=(x, y), bounds=bounds,method='SLSQP')
+end = time.time()
+serial_time = end - start
+print("Serial took {0:.1f} seconds".format(serial_time))
+
+thetaObs_ml,thetaCore_ml,thetaWing_ml,n0_ml,p_ml,epsilon_e_ml,epsilon_B_ml,E0_ml = soln.x
 
 y_ml = ag_py(x,thetaObs_ml,thetaCore_ml,thetaWing_ml,n0_ml,p_ml,epsilon_e_ml,epsilon_B_ml,E0_ml)
 
@@ -77,39 +79,54 @@ print("Maximum likelihood estimates:")
 print("E0 = {0:.3f}".format(E0_ml))
 print("thetaObs = {0:.3f}".format(thetaObs_ml))
 print("thetaCore = {0:.3f}".format(thetaCore_ml))
-print("thetaWing = {0:.3f}".format(thetaWing_ml))
-print("n0 = {0:.3f}".format(n0_ml))
+print("thetaWing = {0:.3f}".format(thetaCore_ml + (0.4-thetaCore_ml) * thetaWing_ml))
+print("n0 = {0:.4f}".format(10**n0_ml))
 print("p = {0:.3f}".format(p_ml))
-print("epsilon_e = {0:.5f}".format(epsilon_e_ml))
-print("epsilon_B = {0:.5f}".format(epsilon_B_ml))
-"""
+print("epsilon_e = {0:.4f}".format(10**epsilon_e_ml))
+print("epsilon_B = {0:.4f}".format(10**epsilon_B_ml))
+
+Fnu = ag_py(x,thetaObs_ml,thetaCore_ml,thetaWing_ml,n0_ml,p_ml,epsilon_e_ml,epsilon_B_ml,E0_ml)
+
+
+
+fig, ax = plt.subplots(1, 1)
+
+ax.plot(x,y,'x')
+ax.plot(x, Fnu)
+
+ax.set(xscale='log', xlabel=r'$t$ (s)', ylabel=r'$F_\nu$[$10^{18}$ Hz] (mJy)')
+
+fig.savefig('datafit.png')
+plt.close(fig)
+
+
 def log_prior(theta):
     E0, thetaObs,thetaCore,thetaWing,n0,p,epsilon_e,epsilon_B = theta
     if (51 < E0 < 54
-        and 0 < thetaObs < np.pi*0.5 
-        and 0 < thetaCore < 0.7 
-        and 0 < thetaWing < np.pi*0.5 
-        and -5 < n0 < 3
+        and 0.0 < thetaObs < np.pi*0.5 
+        and 0.01 < thetaCore < 0.4 
+        and 0.0 < thetaWing < 1.0
+        and -5.0 < n0 < 3.0
         and 2.1 < p < 3.0
-        and 0 < epsilon_e < 1
-        and 0 < epsilon_B < 1):
+        and -5.0 < epsilon_e < 0.0
+        and -5.0 < epsilon_B < 0.0):
         return 0.0
     return -np.inf
     
-def log_probability(theta, x, y, yerr):
+def log_probability(theta, x, y):
     lp = log_prior(theta)
     if not np.isfinite(lp):
         return -np.inf
-    return lp + log_likelihood(theta, x, y, yerr)
+    return lp + residual(theta, x, y)
 
 
 pos = soln.x + 1e-4 * np.random.randn(32, 8)
 nwalkers, ndim = pos.shape
-with Pool() as pool:
-	sampler = emcee.EnsembleSampler(
-		nwalkers, ndim, log_probability,Pool=pool, args=(x, y, yerr)
-	)
-	sampler.run_mcmc(pos, 1000, progress=True);
+
+sampler = emcee.EnsembleSampler(
+	nwalkers, ndim, log_probability, args=(x, y)
+)
+sampler.run_mcmc(pos, 100000, progress=True);
 
 #tau = sampler.get_autocorr_time()
 #print(tau)
@@ -137,5 +154,3 @@ fig2 = corner.corner(
 
 fig2.savefig('corner_plots.png')
 plt.close(fig2)
-
-"""
