@@ -42,7 +42,7 @@ def residual(theta,x,y):
         raise ValueError("ag_py returned non-finite values.")
     #print(sum(((y - model)**2) / abs(model)))
     return sum(((y - model)**2) / abs(model))
-
+    
 def log_likelihood(theta,x,y):
     return -0.5 * residual(theta,x,y)
 
@@ -50,6 +50,57 @@ def log_likelihood(theta,x,y):
 x, ydata = np.genfromtxt('../data/test_curve.txt',delimiter=',',skip_header=11, unpack=True)
 y = np.log(ydata)
 
+
+# Define bounds: E0 > 0 and log(f) unrestricted
+bounds = [(0, np.pi*0.5),(0.01, 0.4), (0.0, 1.0),(-4.0, 3.0), (2.1, 2.8),(-4.0, 0.0), (-4.0, 0.0), (51.0, 54.0)] 
+
+# definine inital parameters
+E0 = 54.0
+thetaObs = 0.1
+thetaCore = 0.3
+thetaWing = 0.5
+n0 = -1.0
+p = 2.5
+epsilon_e = -2.0
+epsilon_B = -4.0
+np.random.seed(42)
+initial = np.array([thetaObs,thetaCore,thetaWing,n0,p,epsilon_e,epsilon_B,E0])
+
+
+#minimize the residual
+start = time.time()
+soln = minimize(residual, initial, args=(x, y), bounds=bounds,method='SLSQP')
+end = time.time()
+serial_time = end - start
+print("Most Probable parameters identified in {0:.1f} seconds".format(serial_time))
+
+thetaObs_ml,thetaCore_ml,thetaWing_ml,n0_ml,p_ml,epsilon_e_ml,epsilon_B_ml,E0_ml = soln.x
+
+y_ml = ag_py(x,thetaObs_ml,thetaCore_ml,thetaWing_ml,n0_ml,p_ml,epsilon_e_ml,epsilon_B_ml,E0_ml)
+
+print("Chi Squared estimates:")
+print("E0 = {0:.3f}".format(E0_ml))
+print("thetaObs = {0:.3f}".format(thetaObs_ml))
+print("thetaCore = {0:.3f}".format(thetaCore_ml))
+print("thetaWing = {0:.3f}".format(thetaCore_ml + (0.4-thetaCore_ml) * thetaWing_ml))
+print("n0 = {0:.4f}".format(10**n0_ml))
+print("p = {0:.3f}".format(p_ml))
+print("epsilon_e = {0:.4f}".format(10**epsilon_e_ml))
+print("epsilon_B = {0:.4f}".format(10**epsilon_B_ml))
+
+Fnu = ag_py(x,thetaObs_ml,thetaCore_ml,thetaWing_ml,n0_ml,p_ml,epsilon_e_ml,epsilon_B_ml,E0_ml)
+
+
+
+fig, ax = plt.subplots(1, 1)
+
+ax.plot(x,y,'x')
+ax.plot(x, Fnu)
+
+ax.set(xscale='log', xlabel=r'$t$ (s)', ylabel=r'$F_\nu$[$10^{18}$ Hz] (mJy)')
+
+fig.savefig('datafit.png')
+plt.close(fig)
 
 
 def log_prior(theta):
@@ -72,16 +123,26 @@ def log_probability(theta, x, y):
     return lp + log_likelihood(theta, x, y)
 
 
-pos = [0.3,0.05,1.0,-3.0,2.3,-1.0,-4.0,53.0] + 1e-4 * np.random.randn(32, 8)
+pos = soln.x + 1e-4 * np.random.randn(32, 8)
 nwalkers, ndim = pos.shape
 
-sampler = emcee.EnsembleSampler(
-	nwalkers, ndim, log_probability, args=(x, y)
-)
-sampler.run_mcmc(pos, 5000, progress=True);
-
-tau = sampler.get_autocorr_time()
-print(tau)
+# start 4 worker processes
+with Pool(processes=4) as pool:
+    sampler = emcee.EnsembleSampler(
+        nwalkers, ndim, log_probability, args=(x, y),pool=pool
+    )
+    try:
+        sampler.run_mcmc(pos, 5000, progress=True)
+    except KeyboardInterrupt:
+            print("\nSampling interrupted! Shutting down pool...")
+    except Exception as e:
+        print(f"Error during sampling: {e}")
+    finally:
+        pool.close()
+        pool.join()  # Ensure all worker processes are cleaned up
+    
+#tau = sampler.get_autocorr_time()
+#print(tau)
 
 fig, axes = plt.subplots(8, figsize=(10, 7), sharex=True)
 samples = sampler.get_chain()
@@ -103,5 +164,5 @@ fig2 = corner.corner(
 )
 
 
-fig2.savefig('corner_plots.png')
+fig2.savefig('probable_parameters.png')
 plt.close(fig2)
