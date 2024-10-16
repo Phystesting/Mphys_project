@@ -126,7 +126,7 @@ def main():
         fig2 = corner.corner(flat_samples, labels=labels, truths=[0.3, 0.05, 1.0, -3.0, 2.3, -1.0, -4.0, 53.0])
         fig2.savefig('probable_parameters.png')
         plt.close(fig2)
-
 # Entry point
 if __name__ == '__main__':
-    main()
+	main()
+
