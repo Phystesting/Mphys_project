@@ -9,7 +9,7 @@ import os
 from multiprocessing import Pool
 import time
 from functools import partial
-import h5py
+
 
 def ag_time(x, thetaObs, thetaCore, n0, p, epsilon_e, epsilon_B, E0, fixed,xi_N,d_L,z):
     # Function to calculate the model
@@ -93,7 +93,7 @@ def log_prior(theta):
         return 0.0
     return -np.inf
 
-def optimize(x, y, initial, yerr=None, datatype=0,fixed=1e18,xi_N=1.0,d_L=1.36e26,z=0.01):
+def optimize(x, y, initial, yerr=None, datatype=0,fixed=1e18,xi_N=1.0,d_L=1.0e26,z=0.01):
     if yerr.any() == None:
         yerr = np.zeros(len(x))
     #calculate least squares fit parameters
@@ -119,7 +119,7 @@ def optimize(x, y, initial, yerr=None, datatype=0,fixed=1e18,xi_N=1.0,d_L=1.36e2
    
 
 
-def run_optimization(x, y, initial, yerr=None, datatype=0,fixed=1e18,xi_N=1.0,d_L=1.36e26,z=0.01):
+def run_optimization(x, y, initial, yerr=None, datatype=0,fixed=1e18,xi_N=1.0,d_L=1.0e26,z=0.01):
     if yerr.any() == None:
         yerr = np.zeros(len(x))
     # Perform the parameter optimization
@@ -140,7 +140,7 @@ def run_optimization(x, y, initial, yerr=None, datatype=0,fixed=1e18,xi_N=1.0,d_
     print("epsilon_B = {0:.5f}".format(10**epsilon_B_ml))
     return soln
 
-def run_sampling(x, y, initial, genfile=0, yerr=None, datatype=0,fixed=1.0e18,xi_N=1.0,d_L=1.36e26,z=0.01, steps=100, nwalkers=32, processes=4, filename="./data/test_sample.h5"):
+def run_sampling(x, y, initial, genfile=0, yerr=None, datatype=0,fixed=1.0e18,xi_N=1.0,d_L=1.0e26,z=0.01, steps=100, nwalkers=32, processes=4, filename="./data/test_sample.h5"):
     if yerr.any() == None:
         yerr = np.zeros(len(x))
     # Run the minimize to find starting point
@@ -163,61 +163,58 @@ def run_sampling(x, y, initial, genfile=0, yerr=None, datatype=0,fixed=1.0e18,xi
     elif genfile == 0:
         # Run the MCMC sampling
         with Pool(processes=processes) as pool:
-            sampler = emcee.EnsembleSampler(nwalkers, ndim, log_prob_fixed, args=(x, y, yerr), pool=pool)
+            sampler = emcee.EnsembleSampler(nwalkers, ndim, log_prob_fixed, args=(x, y, yerr), pool=pool, backend=backend)
             sampler.run_mcmc(pos, steps, progress=True)
     else:
         raise ValueError("Invalid genfile. Must be 0 for to run without generating a file or 1 to do so.")
     
     return sampler
 
-def run_sampling2(x, y, initial, genfile=0, yerr=None, datatype=0, fixed=1.0e18, xi_N=1.0, d_L=1.36e26, z=0.01, steps=100, nwalkers=32, processes=4, filename="./data/test_sample.h5"):
+def run_manual_parallel_tempering(x, y, initial, yerr=None, datatype=0, fixed=1.0e18,xi_N=1.0,d_L=1.0e26,z=0.01, steps=100, ntemps=10, nwalkers=32, swap_interval=10):
     if yerr is None:
         yerr = np.zeros(len(x))
     
-    # Run the minimize to find the starting point
-    soln = optimize(x, y, initial, yerr, datatype, fixed, xi_N, d_L, z)
-    pos = soln + 1e-4 * np.random.randn(nwalkers, len(soln))
-    ndim = len(soln)
+    ndim = len(initial)
     
-    # Use the wrapper function to fix datatype for the MCMC sampling
-    log_prob_fixed = partial(log_probability, datatype=datatype, fixed=fixed, xi_N=xi_N, d_L=d_L, z=z)
+    # Define a log-probability function wrapper for each temperature
+    def log_prob_temp(theta, temp, *args):
+        return log_probability(theta, *args) / temp
     
-    if genfile == 1:
-        # Set up the backend
-        backend = emcee.backends.HDFBackend(filename)
+    # Create the samplers, one for each temperature
+    temperatures = np.logspace(0, np.log10(10), ntemps)  # Linear spacing in log space
+    samplers = [emcee.EnsembleSampler(nwalkers, ndim, partial(log_prob_temp, temp=temp), args=(x, y, yerr, datatype, fixed, xi_N, d_L, z)) for temp in temperatures]
+    
+    soln = optimize(x, y, initial,yerr, datatype,fixed,xi_N,d_L,z)
+    
+    # Initialize walker positions for each temperature
+    pos = [soln for _ in range(ntemps)]
+    
+    # Storage for the samples
+    all_samples = [[] for _ in range(ntemps)]
+    
+    # Run the MCMC with periodic swapping
+    for step in range(steps):
+        # Perform a sampling step for each sampler
+        for i, sampler in enumerate(samplers):
+            pos[i], _, _ = sampler.run_mcmc(pos[i], 1, progress=False)
+            all_samples[i].append(pos[i])
         
-        # Check if 'mcmc' exists in the HDF5 file and get the current number of walkers
-        try:
-            with h5py.File(filename, "a") as f:
-                if "mcmc" in f:
-                    # If 'mcmc' group exists, append new walkers to the existing dataset
-                    nwalkers_existing = f["mcmc/chain"].shape[1]
-                    print(f"'mcmc' group found with {nwalkers_existing} existing walkers. Adding new walkers.")
-                    nwalkers_total = nwalkers_existing + nwalkers
-                    
-                else:
-                    # If 'mcmc' group does not exist, start fresh
-                    print("'mcmc' group not found. Initializing the HDF5 file.")
-                    backend.reset(nwalkers, ndim)
-                    nwalkers_total = nwalkers
-        except Exception as e:
-            print(f"Error accessing HDF5 file: {e}")
-            backend.reset(nwalkers, ndim)
-            nwalkers_total = nwalkers
-
-        # Run the MCMC sampling and append the new walkers
-        with Pool(processes=processes) as pool:
-            sampler = emcee.EnsembleSampler(nwalkers, ndim, log_prob_fixed, args=(x, y, yerr), pool=pool, backend=backend)
-            sampler.run_mcmc(pos, steps, progress=True)
-    elif genfile == 0:
-        # Run the MCMC sampling without saving to a file
-        with Pool(processes=processes) as pool:
-            sampler = emcee.EnsembleSampler(nwalkers, ndim, log_prob_fixed, args=(x, y, yerr), pool=pool)
-            sampler.run_mcmc(pos, steps, progress=True)
-    else:
-        raise ValueError("Invalid genfile. Must be 0 for running without generating a file or 1 to do so.")
+        # Swap positions between chains every 'swap_interval' steps
+        if (step + 1) % swap_interval == 0:
+            for i in range(ntemps - 1):
+                # Choose walkers to swap
+                for j in range(nwalkers):
+                    # Metropolis-Hastings acceptance criteria for swapping
+                    beta = 1.0 / temperatures[i + 1] - 1.0 / temperatures[i]
+                    delta_log_prob = (samplers[i + 1].get_log_prob()[j] - samplers[i].get_log_prob()[j])
+                    if np.log(np.random.rand()) < beta * delta_log_prob:
+                        # Swap the walkers
+                        pos[i][j], pos[i + 1][j] = pos[i + 1][j], pos[i][j]
     
-    return sampler
+    # Flatten the samples and return results for the lowest temperature
+    samples_lowest_temp = np.vstack(all_samples[0])
+    
+    return samplers, samples_lowest_temp
 
 def plot_results(sampler,truth,filename1='./graph/probable_parameters.png',filename2='./graph/parameter_steps.png'):
     try:
@@ -226,6 +223,7 @@ def plot_results(sampler,truth,filename1='./graph/probable_parameters.png',filen
         thin = int(0.5 * np.min(tau))
     except emcee.autocorr.AutocorrError:
         print("Warning: Autocorrelation time estimation failed. Proceeding with current chain length.")
+        tau = sampler.get_autocorr_time()
         burnin = len(sampler.get_chain()) // 3  # Use some default burn-in, e.g., one-third of the chain length
         thin = 1  # No thinning
     labels = ["thetaObs", "thetaCore", "n0", "p", "epsilon_e", "epsilon_B", "E0"]
@@ -288,3 +286,28 @@ def fit_spec(x,y,initial,yerr,sampler,fixed,xi_N,d_L,z):
     ax.set(xscale='log', xlabel=r'$frequency$ (Hz)', ylabel=r'$ln(F_\nu)$[$10^{18}$ Hz] (ln(mJy))')
     fig.savefig('./graph/fitrange2.png')
     plt.close(fig)
+    
+def plot_parallel_tempering_results(sampler, samples, labels=None, filename_corner='./graph/parallel_tempering_corner.png', filename_trace='./graph/parallel_tempering_trace.png'):
+    # Corner plot for the posterior distributions
+    fig_corner = corner.corner(samples, labels=labels, show_titles=True)
+    fig_corner.suptitle('Corner Plot of Parallel Tempering MCMC')
+    fig_corner.savefig(filename_corner)
+    plt.close(fig_corner)
+
+    # Trace plots to visualize the sampling history for each parameter
+    ndim = samples.shape[1]
+    fig_trace, axes = plt.subplots(ndim, figsize=(10, 7), sharex=True)
+    
+    for i in range(ndim):
+        # Extract the samples for each walker and parameter for the lowest temperature chain
+        walker_samples = sampler.chain[0, :, :, i]
+        for walker in walker_samples:
+            axes[i].plot(walker, alpha=0.3, color='k')  # Plot each walker trace
+        axes[i].set_ylabel(labels[i] if labels else f"Param {i+1}")
+        axes[i].yaxis.set_label_coords(-0.1, 0.5)
+    
+    axes[-1].set_xlabel("Step Number")
+    fig_trace.suptitle('Trace Plot of Parallel Tempering MCMC')
+    fig_trace.tight_layout()
+    fig_trace.savefig(filename_trace)
+    plt.close(fig_trace)
