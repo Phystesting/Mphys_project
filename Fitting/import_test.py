@@ -33,9 +33,9 @@ y2_noisy = y2 + np.random.normal(0, noise_level, size=y2.shape)
 yerr = abs(y_noisy * 0.05) + noise_level
 yerr2 = abs(y2_noisy * 0.05) + noise_level
 if __name__ == '__main__':
-    """
-    sampler = js.run_sampling(x,y_noisy,initial,yerr=yerr,processes=10,filename='./data/time_v1.h5',genfile=1,steps=10000,datatype=0,fixed=1e18,d_L=1e26,z=0.01)
-    sampler2 = js.run_sampling(x2,y2_noisy,initial,yerr=yerr2,processes=10,filename='./data/spec_v1.h5',genfile=1,steps=10000,datatype=1,fixed=86400,d_L=1e26,z=0.01)
+    
+    sampler = js.run_sampling(x,y_noisy,initial,yerr=yerr,processes=7,filename='./data/time_v1.h5',genfile=1,steps=10000,datatype=0,fixed=1e18,d_L=1e26,z=0.01)
+    sampler2 = js.run_sampling(x2,y2_noisy,initial,yerr=yerr2,processes=7,filename='./data/spec_v1.h5',genfile=1,steps=10000,datatype=1,fixed=86400,d_L=1e26,z=0.01)
     #js.optimize(x2,y2,initial,datatype=1,fixed=86400,d_L=1e28,z=0.55)
     
     #t_sample,spec_sample = js.run_combined_sampling(x,y_noisy,x2,y2_noisy,initial,time_yerr=yerr,spec_yerr=yerr2)
@@ -49,7 +49,7 @@ if __name__ == '__main__':
     #chain = reader.get_chain()[0][0]
     #chain_shape = chain.shape
     #print(chain)
-    js.plot_results(reader,truth)
+    js.plot_results(reader,truth,filename1='./graph/time_step.png',filename2='./graph/time_parameters.png')
 
     file_path = './data/spec_v1.h5'
     if not os.path.exists(file_path):
@@ -57,13 +57,13 @@ if __name__ == '__main__':
     backend = emcee.backends.HDFBackend(file_path)
     if backend.iteration == 0:
         raise ValueError("The HDF5 file is empty. No data was stored.")
-    reader = emcee.backends.HDFBackend(file_path)
+    reader2 = emcee.backends.HDFBackend(file_path)
     #chain = reader.get_chain()[0][0]
     #chain_shape = chain.shape
     #print(chain)
-    js.plot_results(reader,truth)
-    """
+    js.plot_results(reader2,truth,filename1='./graph/spec_step.png',filename2='./graph/spec_parameters.png')
     
+    """
     file1 = "./data/time_v1.h5"
     file2 = "./data/spec_v1.h5"
 
@@ -126,4 +126,4 @@ if __name__ == '__main__':
     #sampler_pt, pt_samples = M.run_manual_parallel_tempering(x, y_noisy, initial, steps=1000, ntemps=10)
     #param_labels = ["thetaObs", "thetaCore", "n0", "p", "epsilon_e", "epsilon_B", "E0"]
     #M.plot_parallel_tempering_results(sampler_pt, pt_samples, labels=param_labels)
-    
+    """
