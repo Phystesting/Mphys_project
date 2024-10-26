@@ -4,20 +4,19 @@ import afterglowpy as grb
 import tempfile
 
 # For convenience, place arguments into a dict.
-Z = {'jetType':     grb.jet.Gaussian,     # Gaussian jet your discrepancy
+Z = {'jetType':     grb.jet.TopHat,     # Gaussian jet your discrepancy
      'specType':    grb.jet.SimpleSpec,   # Basic Synchrotron Emission Spectrum your discrepancy
      'counterjet': True,
 
-     'thetaObs':    0.559,   # Viewing angle in radians -known
-     'E0':          7.485e52, # Isotropic-equivalent energy in erg
-     'thetaCore':   0.09,    # Half-opening angle in radians
-     'thetaWing':   1.079,    # Outer truncation angle
-     'n0':          0.07714,    # circumburst density in cm^{-3}
-     'p':           2.372,    # electron energy distribution index
-     'epsilon_e':   0.1472,    # epsilon_e
-     'epsilon_B':   0.00004,   # epsilon_B
+     'thetaObs':    0.0,   # Viewing angle in radians -known
+     'E0':          1e53, # Isotropic-equivalent energy in erg
+     'thetaCore':   0.1,    # Half-opening angle in radians
+     'n0':          0.0,    # circumburst density in cm^{-3}
+     'p':           2.3,    # electron energy distribution index
+     'epsilon_e':   0.01,    # epsilon_e
+     'epsilon_B':   0.0001,   # epsilon_B
      'xi_N':        1.0,    # Fraction of electrons accelerated
-     'd_L':         1.36e26, # Luminosity distance in cm -known
+     'd_L':         1.0e26, # Luminosity distance in cm -known
      'z':           0.01}   # redshift -known
      
 
