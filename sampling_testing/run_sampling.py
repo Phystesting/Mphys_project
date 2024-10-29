@@ -14,13 +14,13 @@ from functools import partial
 import concurrent.futures
 import sampler as splr
     
-initial = np.array([0.2,-2,2.5,-3,-3,55])
+initial = np.array([0.3,-1,3,-3,-3,55])
 
 nu = np.geomspace(1e0, 1e20, num=7)
 t = np.geomspace(1e-1 * grb.day2sec, 1e3 * grb.day2sec, num=17)
 
 x = [t,nu]
-print(nu[6])
+#print(nu[6])
 F = np.array(splr.Flux(x,0.1,0,2.3,-2,-4,53,0.0,1,1e26,0.01))
 time_error_1d = 0.05*t
 spec_error_1d = 0.05*nu
@@ -34,17 +34,14 @@ err_flux = abs(0.05*F)
 err = [err_flux,err_time,err_spec]
 truth = [0.1,0.0,2.3,-2,-4,53]
 
-fig, ax = plt.subplots(1, 1)
-ax.set(xscale='log', xlabel=r'$t$ (s)', ylabel=r'$\log_{10}(F_\nu)$ (mJy)')
-#for freq_idx, nu_value in enumerate(nu):
-ax.errorbar(t, F_noise[:, 1],xerr=err_time[:, 1],yerr=err_flux[:, 1], fmt='.', label=f'{10:.2e} Hz')
-plt.show()
+
 #if __name__ == "__main__":
-    #run_parallel_optimization(x,F_noise,initial,yerr,processes=6)
-#run_optimization(x,F_noise,initial,yerr)
-"""
+    #splr.run_parallel_optimization(x,F_noise,initial,err,processes=4)
+#splr.run_optimization(x,F_noise,initial,err)
+
+
 if __name__ == "__main__":
-    splr.run_sampling(x,F,initial,err,steps=30000,processes=6,genfile=1,filename='./data/err_3D.h5')
+    splr.run_sampling(x,F,initial,err,steps=1000,processes=6,genfile=1,filename='./data/err_3D.h5')
 
 
     file_path = './data/err_3D.h5'
@@ -80,4 +77,3 @@ if __name__ == "__main__":
     fig2 = corner.corner(flat_samples, labels=labels, truths=truth)
     fig2.savefig('./graph/err_3D_contour.png')
     plt.close(fig2)
-    """

@@ -58,6 +58,9 @@ def log_likelihood(theta, x, y, err, thetaObs, xi_N, d_L, z):
     if not np.all(np.isfinite(model)):
         raise ValueError("Model returned non-finite values.")
     
+    time = np.tile(x[0][:, np.newaxis], (1, len(x[1])))
+    spec = np.tile(x[1], (len(x[0]), 1))
+    
     model = np.array(model)
     y = np.array(y)
     err_flux = np.array(err_flux)
@@ -67,17 +70,19 @@ def log_likelihood(theta, x, y, err, thetaObs, xi_N, d_L, z):
     # Create a mask for non-NaN values in y
     mask = ~np.isnan(y)
     y = y[mask]
+    time = time[mask]
+    spec = spec[mask]
     err_flux = err_flux[mask]
     err_time = err_time[mask]
     err_spec = err_spec[mask]
     model = model[mask]
     
     # Calculate the combined error term (flux, time, and spectral errors)
-    sigma2 = err_flux**2 + err_time**2 + err_spec**2 + model**2
+    sigma2 = err_flux**2 + (y*err_time/time)**2 + (y*err_spec/spec)**2 + model**2
     
     # Optional penalty for parameters outside certain bounds
     penalty_factor = 2 * np.where(abs(n0) > 4, (abs(n0) - 4) ** 2, 0)
-    
+    #print(-0.5 * np.sum(np.exp(abs(y - model)) * (y - model)**2 / sigma2) - penalty_factor)
     # Calculate the negative log-likelihood
     return -0.5 * np.sum(np.exp(abs(y - model)) * (y - model)**2 / sigma2) - penalty_factor
 
