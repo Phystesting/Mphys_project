@@ -22,8 +22,8 @@ t = np.geomspace(1e-1 * grb.day2sec, 1e3 * grb.day2sec, num=17)
 x = [t,nu]
 #print(nu[6])
 F = np.array(splr.Flux(x,0.1,0,2.3,-2,-4,53,0.0,1,1e26,0.01))
-time_error_1d = 0.05*t
-spec_error_1d = 0.05*nu
+time_error_1d = 0.0*t
+spec_error_1d = 0.0*nu
 err_time = np.tile(time_error_1d[:, np.newaxis], (1, len(nu)))
 err_spec = np.tile(spec_error_1d, (len(t), 1))
 

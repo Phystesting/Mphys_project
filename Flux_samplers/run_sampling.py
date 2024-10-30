@@ -14,30 +14,37 @@ from functools import partial
 import concurrent.futures
 import sampler as splr
     
-initial = np.array([0.1,0.0,2.3,-2,-4,53])
+initial = np.array([0.3,-1,3,-3,-3,55])
 
 nu = np.geomspace(1e0, 1e20, num=7)
 t = np.geomspace(1e-1 * grb.day2sec, 1e3 * grb.day2sec, num=17)
 
 x = [t,nu]
-F = np.array(Flux(x,0.1,0,2.3,-2,-4,53,0.0,1,1e26,0.01))
+#print(nu[6])
+F = np.array(splr.Flux(x,0.1,0,2.3,-2,-4,53,0.0,1,1e26,0.01))
+time_error_1d = 0.0*t
+spec_error_1d = 0.0*nu
+err_time = np.tile(time_error_1d[:, np.newaxis], (1, len(nu)))
+err_spec = np.tile(spec_error_1d, (len(t), 1))
 
 #F2 = np.array(Flux(x,0.1,0,2.3,-2,-4,53,0.0,1,1e26,0.01))
 noise_level = abs(0.05*F)
 F_noise = F + np.random.normal(0, noise_level, size=F.shape)
-yerr = abs(0.05*F)
+err_flux = abs(0.05*F)
+err = [err_flux,err_time,err_spec]
 truth = [0.1,0.0,2.3,-2,-4,53]
 
 
 #if __name__ == "__main__":
-    #run_parallel_optimization(x,F_noise,initial,yerr,processes=6)
-#run_optimization(x,F_noise,initial,yerr)
+    #splr.run_parallel_optimization(x,F_noise,initial,err,processes=4)
+#splr.run_optimization(x,F_noise,initial,err)
+
 
 if __name__ == "__main__":
-    splr.run_sampling(x,F,initial,yerr,steps=100,processes=6,genfile=1,filename='./data/test.h5')
+    splr.run_sampling(x,F,initial,err,steps=1000,processes=6,genfile=1,filename='./data/err_3D.h5')
 
 
-    file_path = './data/test.h5'
+    file_path = './data/err_3D.h5'
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"The HDF5 file '{file_path}' does not exist.")
     backend = emcee.backends.HDFBackend(file_path)
@@ -64,9 +71,9 @@ if __name__ == "__main__":
         ax.set_ylabel(labels[i])
         ax.yaxis.set_label_coords(-0.1, 0.5)
     axes[-1].set_xlabel("step number")
-    fig.savefig('./graph/test.png')
+    fig.savefig('./graph/err_3D_steps.png')
     plt.close(fig)
     flat_samples = reader.get_chain(discard=burnin,thin=thin,flat=True)#
     fig2 = corner.corner(flat_samples, labels=labels, truths=truth)
-    fig2.savefig('./graph/test2.png')
+    fig2.savefig('./graph/err_3D_contour.png')
     plt.close(fig2)

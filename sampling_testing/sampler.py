@@ -78,13 +78,12 @@ def log_likelihood(theta, x, y, err, thetaObs, xi_N, d_L, z):
     model = model[mask]
     
     # Calculate the combined error term (flux, time, and spectral errors)
-    sigma2 = err_flux**2 + (y*err_time/time)**2 + (y*err_spec/spec)**2 + model**2
+    sigma2 = err_flux**2 + model**2
     
-    # Optional penalty for parameters outside certain bounds
-    penalty_factor = 2 * np.where(abs(n0) > 4, (abs(n0) - 4) ** 2, 0)
+
     #print(-0.5 * np.sum(np.exp(abs(y - model)) * (y - model)**2 / sigma2) - penalty_factor)
     # Calculate the negative log-likelihood
-    return -0.5 * np.sum(np.exp(abs(y - model)) * (y - model)**2 / sigma2) - penalty_factor
+    return -0.5 * np.sum((y - model)**2 / sigma2)
 
 def log_probability(theta, x, y, err, thetaObs, xi_N, d_L, z):
     # Calculate the log-prior
