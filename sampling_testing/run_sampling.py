@@ -41,7 +41,7 @@ truth = [0.1,0.0,2.3,-2,-4,53]
 
 
 if __name__ == "__main__":
-    splr.run_sampling(x,F,initial,err,steps=1000,processes=6,genfile=1,filename='./data/err_3D.h5')
+    splr.run_sampling(x,F,initial,err,steps=100,processes=2,genfile=1,filename='../../../Large_data/err_3D.h5')
 
 
     file_path = './data/err_3D.h5'
