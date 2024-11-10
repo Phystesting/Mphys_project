@@ -15,5 +15,10 @@ import concurrent.futures
 
 
 # try generation in 3 bands x-ray, optical, radio
-#x-ray generation
+#larger errors at larger times
+#x-ray generation error ~ 0.1-0.2
+
+#optical generation error ~ 0.02-0.2
+
+#radio generation error ~ 0.1-0.7
 
