@@ -12,13 +12,13 @@ from multiprocessing import Pool
 import time
 from functools import partial
 import concurrent.futures
-import sampler as splr
+import sampler7 as splr
 
 z = 1.619
 d_L = 39.755*9.461e26
 
 # core angle, log10 density, electron distribution, log10 thermal fraction, log10 magnetic fraction, log10 isotropic energy, observation angle
-initial = np.array([0.1,1.0,2.3,-1.0,-2.0,54.0])
+initial = np.array([0.1,1.0,2.3,-1.0,-2.0,54.0,0.0])
 
 #unpack data
 time, freq, flux, flux_err = np.genfromtxt('./data/990510.csv',delimiter=',',skip_header=1,unpack=True)
@@ -40,21 +40,14 @@ nu_err = np.zeros((len(t), len(nu)))
 
 err = [f_err,t_err,nu_err]
 truth = [0.1,0.0,2.3,-2,-4,53,0.0]
-"""
-for freq_idx, nu_value in enumerate(nu):
-    plt.errorbar(np.log10(t),F[:,freq_idx],yerr=f_err[:,freq_idx],fmt='.', label=f'{nu_value:.2e} Hz')
-plt.legend()
-plt.show()
-"""
-
 
 
 #if __name__ == "__main__":
     #run_parallel_optimization(x,F_noise,initial,err,processes=6)
-splr.run_optimization([t,nu],F,initial,err)
-"""
+#splr.run_optimization(x,F_noise,initial,err)
+
 if __name__ == "__main__":
-    splr.run_sampling([t,nu],F,initial,err,d_L=d_L,z=z,steps=10000,processes=4,genfile=1,filename='../../../Large_data/Real_Data.h5')
+    splr.run_sampling([t,nu],F,initial,err,d_L=d_L,z=z,steps=100,processes=4,genfile=1,filename='../../../Large_data/Real_Data.h5')
 
 
     file_path = '../../../Large_data/Real_Data.h5'
@@ -77,7 +70,7 @@ if __name__ == "__main__":
     labels = ["thetaCore", "n0", "p", "epsilon_e", "epsilon_B", "E0", "thetaObs"]
     # Plot the sampling results
     samples = reader.get_chain()
-    fig, axes = plt.subplots(len(labels), figsize=(10, 6), sharex=True)
+    fig, axes = plt.subplots(len(labels), figsize=(10, 7), sharex=True)
     for i, ax in enumerate(axes):
         ax.plot(samples[:, :, i], "k", alpha=0.3)
         ax.set_xlim(0, len(samples))
@@ -90,4 +83,3 @@ if __name__ == "__main__":
     fig2 = corner.corner(flat_samples, labels=labels, truths=truth)
     fig2.savefig('./graph/990510_contour.png')
     plt.close(fig2)
-"""
