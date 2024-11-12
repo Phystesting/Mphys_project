@@ -18,7 +18,7 @@ z = 1.619
 d_L = 39.755*9.461e26
 
 # core angle, log10 density, electron distribution, log10 thermal fraction, log10 magnetic fraction, log10 isotropic energy, observation angle
-initial = np.array([0.1,1.0,2.3,-1.0,-2.0,54.0,0.0])
+initial = np.array([0.1,1.0,2.3,-1.0,-2.0,52.0,0.0])
 
 #unpack data
 time, freq, flux, flux_err = np.genfromtxt('./data/990510.csv',delimiter=',',skip_header=1,unpack=True)
@@ -47,7 +47,7 @@ truth = [0.1,0.0,2.3,-2,-4,53,0.0]
 #splr.run_optimization(x,F_noise,initial,err)
 
 if __name__ == "__main__":
-    splr.run_sampling([t,nu],F,initial,err,d_L=d_L,z=z,steps=100,processes=4,genfile=1,filename='../../../Large_data/Real_Data.h5')
+    splr.run_sampling([t,nu],F,initial,err,d_L=d_L,z=z,steps=10,processes=10,genfile=1,filename='../../../Large_data/Real_Data.h5')
 
 
     file_path = '../../../Large_data/Real_Data.h5'
