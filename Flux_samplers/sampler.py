@@ -81,7 +81,7 @@ def log_likelihood(theta, x, y, err, thetaObs, xi_N, d_L, z):
     sigma2 = err_flux**2 + model**2
     
 
-    print(-0.5 * np.sum((y - model)**2 / sigma2))
+    #print(-0.5 * np.sum((y - model)**2 / sigma2))
     # Calculate the negative log-likelihood
     return -0.5 * np.sum((y - model)**2 / sigma2)
 

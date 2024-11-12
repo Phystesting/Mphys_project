@@ -39,7 +39,7 @@ t_err = np.zeros((len(t), len(nu)))
 nu_err = np.zeros((len(t), len(nu)))
 
 err = [f_err,t_err,nu_err]
-truth = [0.1,0.0,2.3,-2,-4,53,0.0]
+truth = [0.1,0.0,2.3,-2,-4,53]
 """
 for freq_idx, nu_value in enumerate(nu):
     plt.errorbar(np.log10(t),F[:,freq_idx],yerr=f_err[:,freq_idx],fmt='.', label=f'{nu_value:.2e} Hz')
@@ -50,11 +50,10 @@ plt.show()
 
 
 #if __name__ == "__main__":
-    #run_parallel_optimization(x,F_noise,initial,err,processes=6)
-splr.run_optimization([t,nu],F,initial,err)
-"""
+    #splr.run_parallel_optimization([t,nu],F,initial,err,processes=6)
+#splr.run_optimization([t,nu],F,initial,err)
 if __name__ == "__main__":
-    splr.run_sampling([t,nu],F,initial,err,d_L=d_L,z=z,steps=10000,processes=4,genfile=1,filename='../../../Large_data/Real_Data.h5')
+    splr.run_sampling([t,nu],F,initial,err,d_L=d_L,z=z,steps=10,processes=8,genfile=1,filename='../../../Large_data/Real_Data.h5')
 
 
     file_path = '../../../Large_data/Real_Data.h5'
@@ -90,4 +89,3 @@ if __name__ == "__main__":
     fig2 = corner.corner(flat_samples, labels=labels, truths=truth)
     fig2.savefig('./graph/990510_contour.png')
     plt.close(fig2)
-"""
