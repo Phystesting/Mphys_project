@@ -47,7 +47,7 @@ truth = [0.1,0.0,2.3,-2,-4,53,0.0]
 #splr.run_optimization(x,F_noise,initial,err)
 
 if __name__ == "__main__":
-    splr.run_sampling([t,nu],F,initial,err,d_L=d_L,z=z,steps=10,processes=10,genfile=1,filename='../../../Large_data/Real_Data.h5')
+    splr.run_sampling([t,nu],F,initial,err,d_L=d_L,z=z,steps=1,processes=100,genfile=1,nwalkers=100,filename='../../../Large_data/Real_Data.h5')
 
 
     file_path = '../../../Large_data/Real_Data.h5'

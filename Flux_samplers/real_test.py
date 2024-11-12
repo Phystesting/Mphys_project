@@ -18,7 +18,7 @@ z = 1.619
 d_L = 39.755*9.461e26
 
 # core angle, log10 density, electron distribution, log10 thermal fraction, log10 magnetic fraction, log10 isotropic energy, observation angle
-initial = np.array([0.1,1.0,2.3,-1.0,-2.0,54.0])
+initial = np.array([0.1,1.0,2.3,-1.0,-3.0,53.0])
 
 #unpack data
 time, freq, flux, flux_err = np.genfromtxt('./data/990510.csv',delimiter=',',skip_header=1,unpack=True)
@@ -53,10 +53,10 @@ plt.show()
     #splr.run_parallel_optimization([t,nu],F,initial,err,processes=6)
 #splr.run_optimization([t,nu],F,initial,err)
 if __name__ == "__main__":
-    splr.run_sampling([t,nu],F,initial,err,d_L=d_L,z=z,steps=10,processes=8,genfile=1,filename='../../../Large_data/Real_Data.h5')
+    splr.run_sampling([t,nu],F,initial,err,d_L=d_L,z=z,steps=400,processes=100,genfile=1,nwalkers=100,filename='../../../Large_data/Real_Data6.h5')
 
 
-    file_path = '../../../Large_data/Real_Data.h5'
+    file_path = '../../../Large_data/Real_Data6.h5'
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"The HDF5 file '{file_path}' does not exist.")
     backend = emcee.backends.HDFBackend(file_path)
@@ -73,7 +73,7 @@ if __name__ == "__main__":
         print("Warning: Autocorrelation time estimation failed. Proceeding with current chain length.")
         burnin = len(reader.get_chain()) // 3  # Use some default burn-in, e.g., one-third of the chain length
         thin = 1  # No thinning
-    labels = ["thetaCore", "n0", "p", "epsilon_e", "epsilon_B", "E0", "thetaObs"]
+    labels = ["thetaCore", "n0", "p", "epsilon_e", "epsilon_B", "E0"]
     # Plot the sampling results
     samples = reader.get_chain()
     fig, axes = plt.subplots(len(labels), figsize=(10, 6), sharex=True)
@@ -83,9 +83,9 @@ if __name__ == "__main__":
         ax.set_ylabel(labels[i])
         ax.yaxis.set_label_coords(-0.1, 0.5)
     axes[-1].set_xlabel("step number")
-    fig.savefig('./graph/990510_steps.png')
+    fig.savefig('./graph/990510_steps6.png')
     plt.close(fig)
     flat_samples = reader.get_chain(discard=burnin,thin=thin,flat=True)
     fig2 = corner.corner(flat_samples, labels=labels, truths=truth)
-    fig2.savefig('./graph/990510_contour.png')
+    fig2.savefig('./graph/990510_contour6.png')
     plt.close(fig2)

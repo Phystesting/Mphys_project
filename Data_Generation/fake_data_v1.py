@@ -20,8 +20,8 @@ t = np.geomspace(1e4,1e6,50)
 nu = np.array([4.8e09,8.6e09,3.72e14,4.55e14,5.45e14,1.08e18])
 x = [t,nu]
 
-F = np.array(splr.Flux(x,0.29,3,5,-1,-5,57,0.0,1.0,9.461e26,1.619))
-
+F_start = np.array(splr.Flux(x,0.095,1.0,2.134,-0.1,-4,53,0.0,1.0,39.755*9.461e26,1.619))
+F = np.full((len(t), len(nu)), np.nan)
 err = np.zeros((len(t),len(nu)))
 
 # try generation in 3 bands x-ray, optical, radio
@@ -30,46 +30,54 @@ err = np.zeros((len(t),len(nu)))
 for t_idx, t_value in enumerate(t):
     err[t_idx,:] = err[t_idx,:] + t_value/max(t)
 """
-#optical generation error ~ 0.02-0.2
+#thinning the data set detection threshold for each freq band 
+#high frequency produces early time data
 
-# Define mean and standard deviation for each range based on the comments
-optical_uv_ir_mean, optical_uv_ir_std = 0.11, 0.05   # Mean ~0.11, SD to keep it roughly within 0.02-0.2
-radio_mean, radio_std = 0.4, 0.15                    # Mean ~0.4, SD to keep it roughly within 0.1-0.7
-high_freq_mean, high_freq_std = 0.15, 0.05           # Mean ~0.15, SD to stay in ~0.1-0.2
+#medium frequency produces middle time with a normal distribution fall off
+
+#low frequency produces late time data set detection threshold for each freq band 
+
+
+for nu_idx, nu_value in enumerate(nu):
+    if nu_value > 1e16:
+        # High frequency
+        samples = rnmb.randint(1,0.5*len(t))
+    elif 1e10 < nu_value < 1e16:
+        # Optical, UV, and Infrared
+        samples = rnmb.randint(1,len(t)-1)  
+    elif nu_value < 1e10:
+        # Radio
+        samples = rnmb.randint(1,int(0.3*len(t)))
+        
+    for i in range(samples):
+        if nu_value > 1e16:
+            index = rnmb.randint(0,int(0.5*len(t)))
+        elif 1e10 < nu_value < 1e16:
+            index = rnmb.randint(0,len(t)-1)
+        elif nu_value < 1e10:
+            index = rnmb.randint(int(0.5*len(t)),len(t)-1)
+        
+        F[index, nu_idx] = F_start[index,nu_idx]
+
+displacement = np.zeros_like(F)
+
 
 for nu_idx, nu_value in enumerate(nu):
     if nu_value > 1e16:
         # High frequency error generation ~ 0.1-0.2
-        err[:, nu_idx] += np.random.normal(high_freq_mean, high_freq_std)
+        err[:, nu_idx] += np.random.normal(0.15, 0.05, size=len(t))
+        displacement[:, nu_idx] = np.random.normal(0.0, 0.1, size=len(t))
         
     elif 1e10 < nu_value < 1e16:
         # Optical, UV, and Infrared generation error ~ 0.02-0.2
-        error_value = np.random.normal(optical_uv_ir_mean, optical_uv_ir_std)
-        err[:, nu_idx] += error_value
-        print(error_value)
+        err[:, nu_idx] += np.random.normal(0.11, 0.05, size=len(t))
+        displacement[:, nu_idx] = np.random.normal(0.0, 0.1, size=len(t))
         
     elif nu_value < 1e10:
         # Radio generation error ~ 0.1-0.7
-        err[:, nu_idx] += np.random.normal(radio_mean, radio_std)
+        err[:, nu_idx] += np.random.normal(0.4, 0.15, size=len(t))
+        displacement[:, nu_idx] = np.random.normal(0.0, 0.35, size=len(t))
 
-displacement = np.zeros_like(F)
-optical_uv_ir_mean, optical_uv_ir_std = 0.0, 0.2   # Mean ~0.11, SD to keep it roughly within 0.02-0.2
-radio_mean, radio_std = 0.0, 0.7                   # Mean ~0.4, SD to keep it roughly within 0.1-0.7
-high_freq_mean, high_freq_std = 0.0, 0.2           # Mean ~0.15, SD to stay in ~0.1-0.2
-
-# Populate displacement based on frequency bands
-for nu_idx, nu_value in enumerate(nu):
-    if nu_value > 1e16:
-        # High frequency displacement ~ 0.1-0.2
-        displacement[:, nu_idx] = np.random.normal(high_freq_mean, high_freq_std, size=len(t))
-        
-    elif 1e10 < nu_value < 1e16:
-        # Optical, UV, and Infrared displacement ~ 0.02-0.2
-        displacement[:, nu_idx] = np.random.normal(optical_uv_ir_mean, optical_uv_ir_std, size=len(t))
-        
-    elif nu_value < 1e10:
-        # Radio displacement ~ 0.1-0.7
-        displacement[:, nu_idx] = np.random.normal(radio_mean, radio_std, size=len(t))
 
 # Generate F_err by adding displacement directly to F
 F_err = F + displacement
