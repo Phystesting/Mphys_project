@@ -50,10 +50,11 @@ plt.show()
 
 
 #if __name__ == "__main__":
-    #splr.run_parallel_optimization([t,nu],F,initial,err,processes=6)
-#splr.run_optimization([t,nu],F,initial,err)
+    #splr.run_parallel_optimization([time,freq],flux,initial,flux_err,processes=2)
+#splr.run_optimization([time,freq],flux,initial,flux_err)
+
 if __name__ == "__main__":
-    splr.run_sampling([t,nu],F,initial,err,d_L=d_L,z=z,steps=400,processes=100,genfile=1,nwalkers=100,filename='../../../Large_data/Real_Data6.h5')
+    splr.run_sampling([time,freq],flux,initial,flux_err,d_L=d_L,z=z,steps=10,processes=2,genfile=1,parallel_optimization=2,nwalkers=32,filename='../../../Large_data/Real_Data6.h5')
 
 
     file_path = '../../../Large_data/Real_Data6.h5'
@@ -89,3 +90,4 @@ if __name__ == "__main__":
     fig2 = corner.corner(flat_samples, labels=labels, truths=truth)
     fig2.savefig('./graph/990510_contour6.png')
     plt.close(fig2)
+

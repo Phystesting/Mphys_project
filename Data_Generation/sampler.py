@@ -13,77 +13,65 @@ import time
 from functools import partial
 import concurrent.futures
 
-#create a function to stack the lists
-def appendList(l,element):
-    l.append(element)
-    return l
 
-def Flux(x,thetaCore, n0, p, epsilon_e, epsilon_B, E0, thetaObs,xi_N,d_L,z):
+def Flux(x,thetaCore, log_n0, p, log_epsilon_e, log_epsilon_B, log_E0, thetaObs,xi_N,d_L,z):
     # Function to calculate the model
     Z = {
         'jetType': grb.jet.TopHat,
         'specType': grb.jet.SimpleSpec,
         'thetaObs': thetaObs,
-        'E0': 10**E0,
+        'E0': 10**log_E0,
         'thetaCore': thetaCore,
-        'n0': 10**n0,
+        'n0': 10**log_n0,
         'p': p,
-        'epsilon_e': 10**epsilon_e,
-        'epsilon_B': 10**epsilon_B,
+        'epsilon_e': 10**log_epsilon_e,
+        'epsilon_B': 10**log_epsilon_B,
         'xi_N': xi_N,
         'd_L': d_L,
         'z': z
 	}
     t = x[0]
     nu = x[1]
-    Flux = [np.log(grb.fluxDensity(t[0], nu, **Z))]
-    #print(Flux)
-    for i in t[1:]:
-        Flux = appendList(Flux,np.log(grb.fluxDensity(i, nu, **Z)))
-        #print(Flux)
-        #print('')
+    
+    Flux = grb.fluxDensity(t, nu, **Z)
     return Flux
 
-def log_likelihood(theta, x, y, err, thetaObs, xi_N, d_L, z):
+def log_likelihood(theta, x, y, err_flux,thetaObs, xi_N, d_L, z):
     # Unpack the parameters
-    thetaCore, n0, p, epsilon_e, epsilon_B, E0 = theta
-
-    # Split the err array into err_flux, err_time, and err_spec
-    err_flux, err_time, err_spec = err
+    thetaCore, log_n0, p, log_epsilon_e, log_epsilon_B, log_E0 = theta
 
     # Calculate the model flux
-    model = Flux(x, thetaCore, n0, p, epsilon_e, epsilon_B, E0, thetaObs, xi_N, d_L, z)
+    model = Flux(x, thetaCore, log_n0, p, log_epsilon_e, log_epsilon_B, log_E0, thetaObs, xi_N, d_L, z)
+    log_model = np.log(model)
     
     # Check if the model returns finite values
     if not np.all(np.isfinite(model)):
         raise ValueError("Model returned non-finite values.")
     
-    time = np.tile(x[0][:, np.newaxis], (1, len(x[1])))
-    spec = np.tile(x[1], (len(x[0]), 1))
+    log_y = np.log(y)
     
-    model = np.array(model)
-    y = np.array(y)
-    err_flux = np.array(err_flux)
-    err_time = np.array(err_time)
-    err_spec = np.array(err_spec)
-
-    # Create a mask for non-NaN values in y
-    mask = ~np.isnan(y)
-    y = y[mask]
-    time = time[mask]
-    spec = spec[mask]
-    err_flux = err_flux[mask]
-    err_time = err_time[mask]
-    err_spec = err_spec[mask]
-    model = model[mask]
+    #convert errors to log space for fitting
+    Ub_err = abs(np.log(y + err_flux) - log_y)
+    Lb_err = abs(np.log(y - err_flux) - log_y)
+    
+    #select errors for this iteration
+    log_err = np.zeros(len(err_flux))
+    
+    #if model is above data use ub if it's below use lb
+    for index, model_value in enumerate(model):
+        if model_value > log_y[index]:
+            log_err[index] = Ub_err[index]
+        else:
+            log_err[index] = Lb_err[index]
     
     # Calculate the combined error term (flux, time, and spectral errors)
-    sigma2 = err_flux**2 + model**2
+    sigma2 = log_err**2 + log_model**2
     
-
-    #print(-0.5 * np.sum(np.exp(abs(y - model)) * (y - model)**2 / sigma2) - penalty_factor)
+    # Optional penalty for parameters outside certain bounds
+    #penalty_factor = 2 * np.where(abs(n0) > 4, (abs(n0) - 4) ** 2, 0) + np.where(0.8,100*(-1 + 1/np.cos(2*thetaObs)), 0)
     # Calculate the negative log-likelihood
-    return -0.5 * np.sum((y - model)**2 / sigma2)
+    #print(-0.5 * np.sum((log_y - log_model)**2 / sigma2))
+    return -0.5 * np.sum((log_y - log_model)**2 / sigma2)
 
 def log_probability(theta, x, y, err, thetaObs, xi_N, d_L, z):
     # Calculate the log-prior
@@ -95,13 +83,13 @@ def log_probability(theta, x, y, err, thetaObs, xi_N, d_L, z):
     
 def log_prior(theta):
     # Function for log-prior calculation
-    thetaCore, n0, p, epsilon_e, epsilon_B, E0 = theta
-    if (45 < E0 < 57
+    thetaCore, log_n0, p, log_epsilon_e, log_epsilon_B, log_E0 = theta
+    if (45 < log_E0 < 57
         and 0.01 < thetaCore < np.pi*0.5
-        and -10.0 < n0 < 10.0
+        and -10.0 < log_n0 < 10.0
         and 2.1 < p < 5.0
-        and -5.0 < epsilon_e < 0.0
-        and -5.0 < epsilon_B < 0.0):
+        and -5.0 < log_epsilon_e < 0.0
+        and -5.0 < log_epsilon_B < 0.0):
         return 0.0
     return -np.inf
 
@@ -115,13 +103,13 @@ def run_optimization(x, y, initial, err, thetaObs=0.0, xi_N=1.0, d_L=1.0e26, z=0
     end = time.time()
     serial_time = end - start
     print(f"Most probable parameters identified in {serial_time:.1f} seconds")
-    thetaCore_ml, n0_ml, p_ml, epsilon_e_ml, epsilon_B_ml, E0_ml = soln.x
-    print(f"E0 = {10**E0_ml:.3e}")
+    thetaCore_ml, log_n0_ml, p_ml, log_epsilon_e_ml, log_epsilon_B_ml, log_E0_ml = soln.x
+    print(f"E0 = {10**log_E0_ml:.3e}")
     print(f"thetaCore = {thetaCore_ml:.3f}")
-    print(f"n0 = {10**n0_ml:.10f}")
+    print(f"n0 = {10**log_n0_ml:.10f}")
     print(f"p = {p_ml:.3f}")
-    print(f"epsilon_e = {10**epsilon_e_ml:.5f}")
-    print(f"epsilon_B = {10**epsilon_B_ml:.5f}")
+    print(f"epsilon_e = {10**log_epsilon_e_ml:.5f}")
+    print(f"epsilon_B = {10**log_epsilon_B_ml:.5f}")
     print(f"Residual (negative log-likelihood) = {soln.fun:.5f}")
     print("-" * 30)
     return soln
@@ -147,24 +135,25 @@ def run_parallel_optimization(x, y, initial, err,processes=4,thetaObs=0.0, xi_N=
     # Select the solution with the lowest function value (lowest residual)
     best_solution = min(results, key=lambda sol: sol.fun)
     # Extract the best parameters
-    thetaCore_ml, n0_ml, p_ml, epsilon_e_ml, epsilon_B_ml, E0_ml = best_solution.x
+    thetaCore_ml, log_n0_ml, p_ml, log_epsilon_e_ml, log_epsilon_B_ml, log_E0_ml = best_solution.x
 
     print("Best parameters identified:")
-    print(f"E0 = {10**E0_ml:.3e}")
+    print(f"E0 = {10**log_E0_ml:.3e}")
     print(f"thetaCore = {thetaCore_ml:.3f}")
-    print(f"n0 = {10**n0_ml:.10f}")
+    print(f"n0 = {10**log_n0_ml:.10f}")
     print(f"p = {p_ml:.3f}")
-    print(f"epsilon_e = {10**epsilon_e_ml:.5f}")
-    print(f"epsilon_B = {10**epsilon_B_ml:.5f}")
+    print(f"epsilon_e = {10**log_epsilon_e_ml:.5f}")
+    print(f"epsilon_B = {10**log_epsilon_B_ml:.5f}")
     print(f"Residual (negative log-likelihood) = {best_solution.fun:.5f}")
     return best_solution
 
-def run_sampling(x, y, initial, err, genfile=0,thetaObs=0.0,xi_N=1.0,d_L=1.0e26,z=0.01, steps=100, nwalkers=32, processes=4, filename="./data/test_sample.h5"):
+def run_sampling(x, y, initial, err, genfile=0,parallel_optimization=0,thetaObs=0.0,xi_N=1.0,d_L=1.0e26,z=0.01, steps=100, nwalkers=32, processes=4, filename="./data/test_sample.h5"):
     ndim = len(initial)
     
     # Use the wrapper function to fix datatype for the MCMC sampling
     log_prob_fixed = partial(log_probability,thetaObs=thetaObs,xi_N=xi_N,d_L=d_L,z=z)
     total_cores = multiprocessing.cpu_count()
+    
     
     if genfile == 1:
         # Set up the backend
@@ -177,12 +166,18 @@ def run_sampling(x, y, initial, err, genfile=0,thetaObs=0.0,xi_N=1.0,d_L=1.0e26,
             # If no previous sampling exists in the file, initialize the walkers
             print("No previous sampling found in the file. Starting fresh.")
             print("Finding optimal starting parameters...")
-            soln = run_optimization(x, y, initial,err,thetaObs,xi_N,d_L,z)
+            if parallel_optimization == 0:
+                soln = run_optimization(x, y, initial,err,thetaObs,xi_N,d_L,z)
+            else:
+                soln = run_parallel_optimization(x, y, initial,err,parallel_optimization,thetaObs,xi_N,d_L,z)
             pos = soln.x + 1e-4 * np.random.randn(nwalkers, ndim)
             backend.reset(nwalkers, ndim)
     else:
         print("Finding optimal starting parameters...")
-        soln = run_optimization(x, y, initial,err,thetaObs,xi_N,d_L,z)
+        if parallel_optimization == 0:
+            soln = run_optimization(x, y, initial,err,thetaObs,xi_N,d_L,z)
+        else:
+            soln = run_parallel_optimization(x, y, initial,err,parallel_optimization,thetaObs,xi_N,d_L,z)
         pos = soln.x + 1e-4 * np.random.randn(nwalkers, ndim)
     print("Utilizing {0:.1f}% of avaliable processes".format(100*processes/total_cores))
     print("Beginning sampling...")

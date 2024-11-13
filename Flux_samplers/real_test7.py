@@ -43,11 +43,12 @@ truth = [0.1,0.0,2.3,-2,-4,53,0.0]
 
 
 #if __name__ == "__main__":
-    #run_parallel_optimization(x,F_noise,initial,err,processes=6)
-#splr.run_optimization(x,F_noise,initial,err)
+    #splr.run_parallel_optimization([time,freq],flux,initial,flux_err,d_L=d_L,z=z,processes=2)
+#splr.run_optimization([time,freq],flux,initial,flux_err,d_L=d_L,z=z)
+
 
 if __name__ == "__main__":
-    splr.run_sampling([t,nu],F,initial,err,d_L=d_L,z=z,steps=1,processes=100,genfile=1,nwalkers=100,filename='../../../Large_data/Real_Data.h5')
+    splr.run_sampling([time,freq],flux,initial,flux_err,d_L=d_L,z=z,steps=10,processes=2,genfile=1,parallel_optimization=2,nwalkers=32,filename='../../../Large_data/Real_Data.h5')
 
 
     file_path = '../../../Large_data/Real_Data.h5'
@@ -83,3 +84,4 @@ if __name__ == "__main__":
     fig2 = corner.corner(flat_samples, labels=labels, truths=truth)
     fig2.savefig('./graph/990510_contour.png')
     plt.close(fig2)
+

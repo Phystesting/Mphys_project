@@ -41,7 +41,7 @@ for t_idx, t_value in enumerate(t):
 for nu_idx, nu_value in enumerate(nu):
     if nu_value > 1e16:
         # High frequency
-        samples = rnmb.randint(1,0.5*len(t))
+        samples = rnmb.randint(1,int(0.5*len(t)))
     elif 1e10 < nu_value < 1e16:
         # Optical, UV, and Infrared
         samples = rnmb.randint(1,len(t)-1)  
@@ -84,7 +84,7 @@ F_err = F + displacement
 
 
 for freq_idx, nu_value in enumerate(nu):
-    plt.errorbar(np.log10(t),F_err[:,freq_idx],yerr=err[:,freq_idx],fmt='.', label=f'{nu_value:.2e} Hz')
+    plt.errorbar(np.log10(t),F_err[:,freq_idx],yerr=abs(err[:,freq_idx]),fmt='.', label=f'{nu_value:.2e} Hz')
 plt.legend()
 plt.show()
 
