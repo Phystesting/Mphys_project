@@ -48,10 +48,10 @@ truth = [0.1,0.0,2.3,-2,-4,53,0.0]
 
 
 if __name__ == "__main__":
-    splr.run_sampling([time,freq],flux,initial,flux_err,d_L=d_L,z=z,steps=10,processes=2,genfile=1,parallel_optimization=2,nwalkers=32,filename='../../../Large_data/Real_Data.h5')
+    splr.run_sampling([time,freq],flux,initial,flux_err,d_L=d_L,z=z,steps=20000,processes=100,genfile=1,parallel_optimization=4,nwalkers=100,filename='../../../Large_data/Real_Data_v2.h5')
 
 
-    file_path = '../../../Large_data/Real_Data.h5'
+    file_path = '../../../Large_data/Real_Data_v2.h5'
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"The HDF5 file '{file_path}' does not exist.")
     backend = emcee.backends.HDFBackend(file_path)
