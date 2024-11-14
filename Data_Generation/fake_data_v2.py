@@ -26,6 +26,7 @@ nu = np.array([4.8e09,8.6e09,3.72e14,4.55e14,5.45e14,1.08e18])
 freq = []
 time = []
 
+#realistic time
 for nu_idx, nu_value in enumerate(nu):
     if nu_value > 1e16:
         # High frequency
@@ -45,9 +46,16 @@ for nu_idx, nu_value in enumerate(nu):
         elif nu_value < 1e10:
             time.append(10**(rng.normal(5.5,0.2)))
         freq.append(nu_value)
+"""
+#uniform time
+for nu_idx, nu_value in enumerate(nu):
+    samples = 50
+    for i in range(samples):
+        time.append(np.exp(0 + i*(18.274-0)/samples))
+        freq.append(nu_value)
+"""
 
-
-F_start = splr.Flux([time,freq],0.1,0.0,2.33,-1,-4,53,0.0,1.0,39.755*9.461e26,1.619)
+F_start = splr.Flux([time,freq],0.1,0.0,2.33,-1,-3,51,0.0,1.0,4.88e28,2.0)
 
 
 err = []
@@ -79,11 +87,11 @@ err = F*err
 
 # Assuming freq, time, and F are already defined as per the previous part of the code
 
-control_data = open('./data/control_data.csv', 'w')
-control_data.write('time (s),Frequency (Hz),Flux (mJy),Flux error\n')
+data = open('./data/realistic_data.csv', 'w')
+data.write('time (s),Frequency (Hz),Flux (mJy),Flux error\n')
 for i in range(len(F)):
-    control_data.write(f"{time[i]},{freq[i]},{F[i]},{err[i]}\n")
-control_data.close()
+    data.write(f"{time[i]},{freq[i]},{F[i]},{err[i]}\n")
+data.close()
 
 # Create a figure and axis
 plt.figure(figsize=(10, 6))
@@ -115,6 +123,7 @@ plt.legend()
 # Show grid
 plt.grid(True)
 
+plt.savefig('./graph/realistic_data.png')
 # Display the plot
 plt.show()
 
