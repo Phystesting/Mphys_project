@@ -36,7 +36,7 @@ time, freq, flux, flux_err = np.genfromtxt('../Data_Generation/data/control_data
 #splr.run_optimization([time,freq],flux,initial,flux_err,z=z,d_L=d_L)
 
 if __name__ == "__main__":
-    splr.run_sampling([time,freq],flux,initial,flux_err,d_L=d_L,z=z,steps=10,processes=2,genfile=1,parallel_optimization=0,nwalkers=32,filename='../../../Large_data/control_samples.h5')
+    splr.run_sampling([time,freq],flux,initial,flux_err,d_L=d_L,z=z,steps=20000,processes=8,genfile=1,parallel_optimization=0,nwalkers=32,filename='../../../Large_data/control_samples.h5')
 
 
     file_path = '../../../Large_data/control_samples.h5'
