@@ -26,6 +26,7 @@ nu = np.array([4.8e09,8.6e09,3.72e14,4.55e14,5.45e14,1.08e18])
 freq = []
 time = []
 
+"""
 #realistic time
 for nu_idx, nu_value in enumerate(nu):
     if nu_value > 1e16:
@@ -53,7 +54,9 @@ for nu_idx, nu_value in enumerate(nu):
     for i in range(samples):
         time.append(np.exp(0 + i*(18.274-0)/samples))
         freq.append(nu_value)
-"""
+
+
+#
 
 F_start = splr.Flux([time,freq],0.1,0.0,2.33,-1,-3,51,0.0,1.0,4.88e28,2.0)
 
@@ -87,7 +90,7 @@ err = F*err
 
 # Assuming freq, time, and F are already defined as per the previous part of the code
 
-data = open('./data/realistic_data.csv', 'w')
+data = open('./data/control_data.csv', 'w')
 data.write('time (s),Frequency (Hz),Flux (mJy),Flux error\n')
 for i in range(len(F)):
     data.write(f"{time[i]},{freq[i]},{F[i]},{err[i]}\n")
@@ -123,9 +126,85 @@ plt.legend()
 # Show grid
 plt.grid(True)
 
-plt.savefig('./graph/realistic_data.png')
+plt.savefig('./graph/control_data.png')
 # Display the plot
 plt.show()
+
+# Find the midpoint in the logarithmic time range
+log_time = np.log(time)
+midpoint_log_time = (min(log_time) + max(log_time)) / 2
+midpoint_time = np.exp(midpoint_log_time)
+
+# Split data based on the midpoint time
+first_half_indices = [i for i in range(len(time)) if time[i] <= midpoint_time]
+second_half_indices = [i for i in range(len(time)) if time[i] > midpoint_time]
+
+time_first_half = [time[i] for i in first_half_indices]
+freq_first_half = [freq[i] for i in first_half_indices]
+F_first_half = [F[i] for i in first_half_indices]
+err_first_half = [err[i] for i in first_half_indices]
+
+time_second_half = [time[i] for i in second_half_indices]
+freq_second_half = [freq[i] for i in second_half_indices]
+F_second_half = [F[i] for i in second_half_indices]
+err_second_half = [err[i] for i in second_half_indices]
+
+# Save the first half to a CSV file
+data_first_half = open('./data/data_first_half.csv', 'w')
+data_first_half.write('time (s),Frequency (Hz),Flux (mJy),Flux error\n')
+for i in range(len(time_first_half)):
+    data_first_half.write(f"{time_first_half[i]},{freq_first_half[i]},{F_first_half[i]},{err_first_half[i]}\n")
+data_first_half.close()
+
+# Save the second half to a CSV file
+data_second_half = open('./data/data_second_half.csv', 'w')
+data_second_half.write('time (s),Frequency (Hz),Flux (mJy),Flux error\n')
+for i in range(len(time_second_half)):
+    data_second_half.write(f"{time_second_half[i]},{freq_second_half[i]},{F_second_half[i]},{err_second_half[i]}\n")
+data_second_half.close()
+
+# Create the first plot for the first half
+plt.figure(figsize=(10, 6))
+
+unique_freqs_first_half = np.unique(freq_first_half)
+for nu_value in unique_freqs_first_half:
+    time_values = [time_first_half[i] for i in range(len(time_first_half)) if freq_first_half[i] == nu_value]
+    F_values = [F_first_half[i] for i in range(len(F_first_half)) if freq_first_half[i] == nu_value]
+    err_values = [err_first_half[i] for i in range(len(err_first_half)) if freq_first_half[i] == nu_value]
+    
+    plt.errorbar(time_values, F_values, yerr=err_values, fmt='.', label=f'Frequency: {nu_value:.3e} Hz')
+
+plt.xlabel('Time (s)')
+plt.ylabel('Flux (mJy)')
+plt.title('Flux vs Time (First Half)')
+plt.xscale('log')
+plt.yscale('log')
+plt.legend()
+plt.grid(True)
+plt.savefig('./graph/data_first_half.png')
+plt.show()
+
+# Create the second plot for the second half
+plt.figure(figsize=(10, 6))
+
+unique_freqs_second_half = np.unique(freq_second_half)
+for nu_value in unique_freqs_second_half:
+    time_values = [time_second_half[i] for i in range(len(time_second_half)) if freq_second_half[i] == nu_value]
+    F_values = [F_second_half[i] for i in range(len(F_second_half)) if freq_second_half[i] == nu_value]
+    err_values = [err_second_half[i] for i in range(len(err_second_half)) if freq_second_half[i] == nu_value]
+    
+    plt.errorbar(time_values, F_values, yerr=err_values, fmt='.', label=f'Frequency: {nu_value:.3e} Hz')
+
+plt.xlabel('Time (s)')
+plt.ylabel('Flux (mJy)')
+plt.title('Flux vs Time (Second Half)')
+plt.xscale('log')
+plt.yscale('log')
+plt.legend()
+plt.grid(True)
+plt.savefig('./graph/data_second_half.png')
+plt.show()
+
 
 
 
