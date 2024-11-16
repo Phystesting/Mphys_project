@@ -50,9 +50,9 @@ for nu_idx, nu_value in enumerate(nu):
 """
 #uniform time
 for nu_idx, nu_value in enumerate(nu):
-    samples = 50
+    samples = 25
     for i in range(samples):
-        time.append(np.exp(0 + i*(18.274-0)/samples))
+        time.append(np.exp(12 + i*(18.274-12)/samples))
         freq.append(nu_value)
 
 
@@ -90,7 +90,7 @@ err = F*err
 
 # Assuming freq, time, and F are already defined as per the previous part of the code
 
-data = open('./data/control_data.csv', 'w')
+data = open('./data/post_jb_data.csv', 'w')
 data.write('time (s),Frequency (Hz),Flux (mJy),Flux error\n')
 for i in range(len(F)):
     data.write(f"{time[i]},{freq[i]},{F[i]},{err[i]}\n")
@@ -126,14 +126,17 @@ plt.legend()
 # Show grid
 plt.grid(True)
 
-plt.savefig('./graph/control_data.png')
+plt.savefig('./graph/post_jb_data.png')
 # Display the plot
 plt.show()
 
+# Split the data in half
+"""
 # Find the midpoint in the logarithmic time range
 log_time = np.log(time)
 midpoint_log_time = (min(log_time) + max(log_time)) / 2
 midpoint_time = np.exp(midpoint_log_time)
+
 
 # Split data based on the midpoint time
 first_half_indices = [i for i in range(len(time)) if time[i] <= midpoint_time]
@@ -204,7 +207,7 @@ plt.legend()
 plt.grid(True)
 plt.savefig('./graph/data_second_half.png')
 plt.show()
-
+"""
 
 
 
