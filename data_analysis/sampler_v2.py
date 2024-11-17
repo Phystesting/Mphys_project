@@ -84,7 +84,7 @@ def log_prior(theta, param_names):
 
     for value, name in zip(theta, param_names):
         low, high = priors[name]
-        if not (low <= value <= high):
+        if not (low < value < high):
             return -np.inf  # Outside bounds
     
     return 0.0  # Uniform prior within bounds

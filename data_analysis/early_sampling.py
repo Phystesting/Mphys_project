@@ -3,7 +3,7 @@ import numpy as np
 
 # Define your fixed parameters separately
 fixed_params = {
-
+    "thetaObs": 0.0,
 }
 
 # Define your initial guesses for the fitting parameters
@@ -14,20 +14,20 @@ initial = {
     "log_epsilon_B": -3.0,
     "log_E0": 51.0,
     "log_n0": 0.0,
-    "thetaObs": 0.0,
+
 }
 
 # Define inputs
-z = 1.619
-d_L = 3.76e28
+z = 2.0
+d_L = 4.88e28
 xi_N = 1.0
 nwalkers = 32
 processes = 40
-steps = 300000
-filename = '/data/PROJECTS/2024-25/cjc233/Large_data/990510_samples.h5'
+steps = 600000
+filename = '/data/PROJECTS/2024-25/cjc233/Large_data/early_samples2.h5'
 
 # Unpack data
-time, freq, flux, flux_err = np.genfromtxt('../Data_Generation/data/990510.csv',delimiter=',',skip_header=1,unpack=True)
+time, freq, flux, flux_err = np.genfromtxt('../Data_Generation/data/data_first_half.csv',delimiter=',',skip_header=1,unpack=True)
 #splr.run_optimization([time,freq], flux, initial,fixed_params, flux_err, xi_N, d_L, z)
 
 if __name__ == "__main__":

@@ -3,7 +3,7 @@ import numpy as np
 
 # Define your fixed parameters separately
 fixed_params = {
-
+    "thetaObs": 0.0,
 }
 
 # Define your initial guesses for the fitting parameters
@@ -14,7 +14,7 @@ initial = {
     "log_epsilon_B": -3.0,
     "log_E0": 51.0,
     "log_n0": 0.0,
-    "thetaObs": 0.0,
+
 }
 
 # Define inputs
@@ -23,7 +23,7 @@ d_L = 4.88e28
 xi_N = 1.0
 nwalkers = 32
 processes = 40
-steps = 300000
+steps = 600000
 filename = '/data/PROJECTS/2024-25/cjc233/Large_data/post_jb_samples.h5'
 
 # Unpack data

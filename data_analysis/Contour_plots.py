@@ -5,9 +5,9 @@ import os
 import emcee
 
 # Define the identifier variable (you can set it to whatever you want)
-identifier = "990510"  # Set your identifier here
+identifier = "control"  # Set your identifier here
 
-file_path = f.'/data/PROJECTS/2024-25/cjc233/Large_data/{identifier}_samples.h5'
+file_path = f'/data/PROJECTS/2024-25/cjc233/Large_data/{identifier}_samples.h5'
 if not os.path.exists(file_path):
     raise FileNotFoundError(f"The HDF5 file '{file_path}' does not exist.")
 backend = emcee.backends.HDFBackend(file_path)
@@ -24,7 +24,17 @@ except emcee.autocorr.AutocorrError:
     burnin = len(reader.get_chain()) // 3  # Use some default burn-in, e.g., one-third of the chain length
     thin = 1  # No thinning
 
-labels = ["thetaCore", "n0", "p", "epsilon_e", "epsilon_B", "E0", "thetaObs"]
+#base_labels = ["thetaCore", "n0", "p", "epsilon_e", "epsilon_B", "E0"]
+base_labels = ["thetaCore", "p", "epsilon_e", "epsilon_B", "E0", "n0"]
+ndim_base = len(base_labels)
+
+# Check if thetaObs is fitted
+if reader.shape[1] == ndim_base + 1:  # thetaObs is included
+    labels = base_labels + ["thetaObs"]
+else:  # thetaObs is not included
+    labels = base_labels
+
+ndim = len(labels)
 
 # Plot the sampling results
 samples = reader.get_chain()
