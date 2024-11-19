@@ -31,6 +31,7 @@ def Flux(x, thetaCore, log_n0, p, log_epsilon_e, log_epsilon_B, log_E0, thetaObs
     return Flux
 
 
+
 def log_likelihood(theta, x, y, err_flux, param_names, fixed_params, xi_N, d_L, z):
     # Create a dictionary for the combined parameters
     params = {name: value for name, value in zip(param_names, theta)}
@@ -53,22 +54,19 @@ def log_likelihood(theta, x, y, err_flux, param_names, fixed_params, xi_N, d_L, 
         raise ValueError("Model returned non-finite values.")
 
     log_y = np.log(y)
+    Lb_err, Ub_err = err_flux
     
     # Convert errors to log space for fitting
-    Ub_err = abs(np.log(y + err_flux) - log_y)
-    Lb_err = abs(np.log(y - err_flux) - log_y)
+    log_Ub_err = abs(np.log(y + Ub_err) - log_y)
+    log_Lb_err = abs(np.log(y - Lb_err) - log_y)
     
-    # Select errors for this iteration
-    log_err = np.zeros(len(err_flux))
-    for index, model_value in enumerate(model):
-        if model_value > log_y[index]:
-            log_err[index] = Ub_err[index]
-        else:
-            log_err[index] = Lb_err[index]
+    # Select error for this iteration
+    log_err = np.where(model > log_y, log_Ub_err, log_Lb_err)
     
     # Calculate the combined error term
     sigma2 = log_err**2
     return -0.5 * np.sum((log_y - log_model)**2 / sigma2)
+
 
 
 def log_prior(theta, param_names):
