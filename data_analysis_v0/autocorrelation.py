@@ -53,9 +53,9 @@ def autocorr_new(y, c=5.0):
     window = auto_window(taus, c)
     return taus[window]
 
-identifier = "170817"  # Set your identifier here
+identifier = "early"  # Set your identifier here
 
-file_path = f'/data/PROJECTS/2024-25/cjc233/Large_data/{identifier}_samples.h5'
+file_path = f'/data/PROJECTS/2024-25/cjc233/Large_data/{identifier}_samples2.h5'
 if not os.path.exists(file_path):
     raise FileNotFoundError(f"The HDF5 file '{file_path}' does not exist.")
 backend = emcee.backends.HDFBackend(file_path)

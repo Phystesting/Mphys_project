@@ -5,7 +5,7 @@ import os
 import emcee
 
 # Define the identifier variable (you can set it to whatever you want)
-identifier = "170817"  # Set your identifier here
+identifier = "early"  # Set your identifier here
 
 file_path = f'/data/PROJECTS/2024-25/cjc233/Large_data/{identifier}_samples.h5'
 if not os.path.exists(file_path):
