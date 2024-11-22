@@ -51,15 +51,15 @@ def log_likelihood(theta, x, y, err_flux, param_names, fixed_params, xi_N, d_L, 
     # Check if the model returns finite values
     if not np.all(np.isfinite(log_model)):
         raise ValueError("Model returned non-finite values.")
-
+    
     log_y = np.log(y)
     
     # Convert errors to log space for fitting
-    Ub_err = abs(np.log(y + err_flux) - log_y)
-    Lb_err = abs(np.log(y - err_flux) - log_y)
+    Log_Ub_err = abs(np.log(y + err_flux) - log_y)
+    log_Lb_err = abs(np.log(y - err_flux) - log_y)
     
     # Select error for this iteration
-    log_err = np.where(model > log_y, log_Ub_err, log_Lb_err)
+    log_err = np.where(log_model > log_y, log_Ub_err, log_Lb_err)
     
     # Calculate the combined error term
     sigma2 = log_err**2

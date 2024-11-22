@@ -27,7 +27,7 @@ steps = 600000
 filename = '/data/PROJECTS/2024-25/cjc233/Large_data/170817_samples.h5'
 
 # Unpack data
-time, freq, flux, Ub_err, Lb_err = np.genfromtxt('../Data_Generation/data/170817_data.csv',delimiter=',',skip_header=1,unpack=True)
+time, freq, flux, Ub_err, Lb_err = np.genfromtxt('../data_generation_v1/data/170817_data.csv',delimiter=',',skip_header=1,unpack=True)
 flux_err = Lb_err, Ub_err
 
 #splr.run_optimization([time,freq], flux, initial,fixed_params, flux_err, xi_N, d_L, z)

@@ -27,8 +27,21 @@ def Flux(x, thetaCore, log_n0, p, log_epsilon_e, log_epsilon_B, log_E0, thetaObs
     }
     t = x[0]
     nu = x[1]
-    Flux = grb.fluxDensity(t, nu, **Z)
+
+    try:
+        Flux = grb.fluxDensity(t, nu, **Z)
+        # Check if all elements of Flux are finite
+        if isinstance(Flux, np.ndarray):
+            if not np.all(np.isfinite(Flux)):
+                raise ValueError("Flux computation returned non-finite values.")
+        elif not np.isfinite(Flux):
+            raise ValueError("Flux computation returned a non-finite value.")
+    except Exception as e:
+        print(f"Error in fluxDensity computation: {e}")
+        return np.full_like(t, 1e-300)  # Return a very small flux value
+
     return Flux
+
 
 
 
@@ -47,11 +60,14 @@ def log_likelihood(theta, x, y, err_flux, param_names, fixed_params, xi_N, d_L, 
     thetaObs = params["thetaObs"]
 
     # Calculate the model flux
-    model = Flux(x, thetaCore, log_n0, p, log_epsilon_e, log_epsilon_B, log_E0, thetaObs, xi_N, d_L, z)
-    log_model = np.log(model)
-    # Check if the model returns finite values
-    if not np.all(np.isfinite(log_model)):
-        raise ValueError("Model returned non-finite values.")
+    try:
+        model = Flux(x, thetaCore, log_n0, p, log_epsilon_e, log_epsilon_B, log_E0, thetaObs, xi_N, d_L, z)
+        log_model = np.log(model)
+        if not np.isfinite(log_model).all():
+            raise ValueError("Model log-flux contains non-finite values.")
+    except Exception as e:
+        print(f"Error in log-likelihood flux calculation: {e}")
+        return -1e10  # Return a very large negative log-likelihood
 
     log_y = np.log(y)
     Lb_err, Ub_err = err_flux
@@ -66,6 +82,7 @@ def log_likelihood(theta, x, y, err_flux, param_names, fixed_params, xi_N, d_L, 
     # Calculate the combined error term
     sigma2 = log_err**2
     return -0.5 * np.sum((log_y - log_model)**2 / sigma2)
+
 
 
 
