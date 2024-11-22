@@ -58,13 +58,8 @@ def log_likelihood(theta, x, y, err_flux, param_names, fixed_params, xi_N, d_L, 
     Ub_err = abs(np.log(y + err_flux) - log_y)
     Lb_err = abs(np.log(y - err_flux) - log_y)
     
-    # Select errors for this iteration
-    log_err = np.zeros(len(err_flux))
-    for index, model_value in enumerate(model):
-        if model_value > log_y[index]:
-            log_err[index] = Ub_err[index]
-        else:
-            log_err[index] = Lb_err[index]
+    # Select error for this iteration
+    log_err = np.where(model > log_y, log_Ub_err, log_Lb_err)
     
     # Calculate the combined error term
     sigma2 = log_err**2
@@ -84,7 +79,7 @@ def log_prior(theta, param_names):
 
     for value, name in zip(theta, param_names):
         low, high = priors[name]
-        if not (low <= value <= high):
+        if not (low < value < high):
             return -np.inf  # Outside bounds
     
     return 0.0  # Uniform prior within bounds

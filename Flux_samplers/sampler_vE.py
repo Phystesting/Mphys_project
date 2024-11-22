@@ -31,8 +31,8 @@ def Flux(x, thetaCore, log_n0, p, log_epsilon_e, log_epsilon_B, log_E0, thetaObs
     return Flux
 
 
-
 def log_likelihood(theta, x, y, err_flux, param_names, fixed_params, xi_N, d_L, z):
+
     # Create a dictionary for the combined parameters
     params = {name: value for name, value in zip(param_names, theta)}
     params.update(fixed_params)
@@ -49,23 +49,27 @@ def log_likelihood(theta, x, y, err_flux, param_names, fixed_params, xi_N, d_L, 
     # Calculate the model flux
     model = Flux(x, thetaCore, log_n0, p, log_epsilon_e, log_epsilon_B, log_E0, thetaObs, xi_N, d_L, z)
     log_model = np.log(model)
-    # Check if the model returns finite values
+
     if not np.all(np.isfinite(log_model)):
         raise ValueError("Model returned non-finite values.")
 
     log_y = np.log(y)
+
+    # Convert errors to log space
     Lb_err, Ub_err = err_flux
-    
-    # Convert errors to log space for fitting
-    log_Ub_err = abs(np.log(y + Ub_err) - log_y)
-    log_Lb_err = abs(np.log(y - Lb_err) - log_y)
-    
-    # Select error for this iteration
-    log_err = np.where(log_model > log_y, log_Ub_err, log_Lb_err)
-    
-    # Calculate the combined error term
-    sigma2 = log_err**2
-    return -0.5 * np.sum((log_y - log_model)**2 / sigma2)
+    log_Ub_err = np.abs(np.log(y + Ub_err) - log_y)
+    log_Lb_err = np.where(Lb_err == y, np.inf, np.abs(np.log(y - Lb_err) - log_y))
+    #print(log_Lb_err)
+    # Select errors for the current iteration
+    log_err = np.where(model > log_y, log_Ub_err, log_Lb_err)
+
+    mask = log_err != np.inf
+
+    # Perform the calculation only when no log_err values are zero
+    sigma2 = log_err[mask]**2
+    log_likelihood_value = -0.5*sum(np.where(log_err == 0 ,np.exp((log_y[mask] - log_model[mask])),(log_y[mask] - log_model[mask])**2 / sigma2))
+    print(log_likelihood_value)
+    return log_likelihood_value
 
 
 
@@ -103,7 +107,7 @@ def run_optimization(x, y, initial,fixed_params, err_flux, xi_N, d_L, z):
 
     bounds = {
         "thetaCore": (0.01, np.pi * 0.5),
-        "log_n0": (-5.0, 5.0),
+        "log_n0": (-10.0, 10.0),
         "p": (2.1, 5.0),
         "log_epsilon_e": (-5.0, 0.0),
         "log_epsilon_B": (-5.0, 0.0),

@@ -61,7 +61,7 @@ def log_likelihood(theta, x, y, err_flux, param_names, fixed_params, xi_N, d_L, 
     log_Lb_err = abs(np.log(y - Lb_err) - log_y)
     
     # Select error for this iteration
-    log_err = np.where(log_model > log_y, log_Ub_err, log_Lb_err)
+    log_err = np.where(model > log_y, log_Ub_err, log_Lb_err)
     
     # Calculate the combined error term
     sigma2 = log_err**2
@@ -103,7 +103,7 @@ def run_optimization(x, y, initial,fixed_params, err_flux, xi_N, d_L, z):
 
     bounds = {
         "thetaCore": (0.01, np.pi * 0.5),
-        "log_n0": (-5.0, 5.0),
+        "log_n0": (-10.0, 10.0),
         "p": (2.1, 5.0),
         "log_epsilon_e": (-5.0, 0.0),
         "log_epsilon_B": (-5.0, 0.0),
