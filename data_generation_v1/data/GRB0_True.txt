@@ -1,0 +1,13 @@
+GRB0 on axis jet
+GaussianCore jet structure
+log_E0 = 51
+thetaCore = 0.1
+thetaObs = 0.0
+thetaWing =  4*thetaCore
+log_n0 = 0.0
+p = 2.33
+log_epsilon_e = -1.0
+log_epsilon_B = -3.0
+xi_N = 1.0
+d_L = 1.43e+27
+z = 0.1

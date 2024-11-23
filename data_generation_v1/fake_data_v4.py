@@ -1,18 +1,52 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import sampler_v3 as splr
+import afterglowpy as grb
 import matplotlib.cm as cm
 
 # Set seed for reproducibility
-seed = 65647437836358831880808032086803839627
+seed = 65647437836358831880808032086803839625
 rng = np.random.default_rng(seed)
+
+def Flux(x, thetaCore, log_n0, p, log_epsilon_e, log_epsilon_B, log_E0, thetaObs, xi_N, d_L, z):
+    # Function to calculate the model
+    Z = {
+        'jetType': grb.jet.GaussianCore,
+        'specType': grb.jet.SimpleSpec,
+        'thetaObs': thetaObs,
+        'E0': 10**log_E0,
+        'thetaCore': thetaCore,
+        'thetaWing': 4*thetaCore,
+        'n0': 10**log_n0,
+        'p': p,
+        'epsilon_e': 10**log_epsilon_e,
+        'epsilon_B': 10**log_epsilon_B,
+        'xi_N': xi_N,
+        'd_L': d_L,
+        'z': z,
+    }
+    t = x[0]
+    nu = x[1]
+
+    try:
+        Flux = grb.fluxDensity(t, nu, **Z)
+        # Check if all elements of Flux are finite
+        if isinstance(Flux, np.ndarray):
+            if not np.all(np.isfinite(Flux)):
+                raise ValueError("Flux computation returned non-finite values.")
+        elif not np.isfinite(Flux):
+            raise ValueError("Flux computation returned a non-finite value.")
+    except Exception as e:
+        print(f"Error in fluxDensity computation: {e}")
+        return np.full_like(t, 1e-300)  # Return a very small flux value
+
+    return Flux
 
 # Function to generate realistic data
 # Function to generate realistic data
 def generate_realistic_data(theta, data_file, frequencies=None, instruments=None, flux_cutoff=True):
     time_min = -1
-    time_max = 1e6
+    time_max = 1e10
     # Unpack simulated GRB properties
     thetaCore, log_n0, p, log_epsilon_e, log_epsilon_B, log_E0, thetaObs, xi_N, d_L, z = theta
     # Load the input data from CSV file
@@ -69,7 +103,7 @@ def generate_realistic_data(theta, data_file, frequencies=None, instruments=None
             freq_values.append(nu_value)
 
             # Calculate flux using the sampler
-            flux_values.append(splr.Flux([t[i], nu_value], thetaCore, log_n0, p, log_epsilon_e, log_epsilon_B, log_E0, thetaObs, xi_N, d_L, z)[0])             
+            flux_values.append(Flux([t[i], nu_value], thetaCore, log_n0, p, log_epsilon_e, log_epsilon_B, log_E0, thetaObs, xi_N, d_L, z)[0])             
             
             # Generate Flux and errors based on instrument
             # Check if UB_err_var is NaN, and handle it accordingly
@@ -118,17 +152,25 @@ selected_instruments = ['Chandra']
 data_file = './data/combined_statistics.csv'
 
 thetaCore = 0.1
-log_n0 = 0.0
-p = 2.33
+log_n0 = 7.0
+p = 2.2
 log_epsilon_e = -1.0
 log_epsilon_B = -3.0
 log_E0 = 51.0
-thetaObs = 0.0
+thetaObs = 0.15
 xi_N = 1.0
-d_L = 1.43e+27
+d_L = 1.43e+26
 z = 0.1
 theta = thetaCore, log_n0, p, log_epsilon_e, log_epsilon_B, log_E0, thetaObs, xi_N, d_L, z
 
+tbi = 2.95*(((10**log_E0)/(1e53))**(1/3))*((10**log_n0)**(-1/3))*((thetaCore/0.1)**(8/3))*86400
+tbo = 24.9*(((10**log_E0)/(1e53))**(1/3))*((10**log_n0)**(-1/3))*(((thetaObs+1.24*thetaCore)/0.5)**(8/3))*86400
+
+if thetaObs < 1.01*thetaCore:
+    tb = tbi
+else:
+    tb = tbo
+print(np.log10(tb))
 
 # Function to introduce gaps in optical data
 def introduce_optical_gaps(time_values, freq_values, flux_values, UB_err, LB_err, optical_min_freq, optical_max_freq):
@@ -214,7 +256,7 @@ generated_data = pd.DataFrame({
 })
 
 # Save the generated data to a CSV file
-generated_data.to_csv('./data/GRB0_control_data.csv', index=False)
+generated_data.to_csv('./data/GRB3_control_data.csv', index=False)
 
 unique_freqs = np.unique(freq_values)
 # Create a colormap instance
@@ -246,7 +288,7 @@ for idx, nu_value in enumerate(unique_freqs):
 # Adding labels and title
 plt.xlabel('Time (s)')
 plt.ylabel('Flux (mJy)')
-plt.title('Flux vs Time for Different Frequencies with Optical Gaps')
+plt.title('Flux vs Time for Different Frequencies')
 
 # Make axis logarithmic
 plt.xscale('log')
@@ -259,7 +301,7 @@ plt.legend()
 plt.grid(True)
 
 # Save the plot
-plt.savefig('./graph/GRB0_control_figure.png')
+plt.savefig('./graph/GRB3_control_figure.png')
 # Display the plot
 plt.show()
 
