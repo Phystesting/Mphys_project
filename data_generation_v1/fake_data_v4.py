@@ -295,7 +295,7 @@ plt.xscale('log')
 plt.yscale('log')
 
 # Show legend
-plt.legend()
+#plt.legend()
 
 # Show grid
 plt.grid(True)

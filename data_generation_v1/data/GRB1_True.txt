@@ -1,10 +1,10 @@
 GRB1 jet break
 GaussianCore jet structure
-log_E0 = 51
+log_E0 = 53
 thetaCore = 0.1
 thetaObs = 0.4
 thetaWing =  4*thetaCore
-log_n0 = 0.0
+log_n0 = 3.0
 p = 2.33
 log_epsilon_e = -1.0
 log_epsilon_B = -3.0

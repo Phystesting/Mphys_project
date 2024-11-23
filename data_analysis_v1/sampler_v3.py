@@ -81,6 +81,7 @@ def log_likelihood(theta, x, y, err_flux, param_names, fixed_params, xi_N, d_L, 
     
     # Calculate the combined error term
     sigma2 = log_err**2
+    #print(-0.5 * np.sum((log_y - log_model)**2 / sigma2))
     return -0.5 * np.sum((log_y - log_model)**2 / sigma2)
 
 
