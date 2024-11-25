@@ -159,7 +159,7 @@ log_epsilon_B = -3.0
 log_E0 = 51.0
 thetaObs = 0.15
 xi_N = 1.0
-d_L = 1.43e+26
+d_L = 1.43e+27
 z = 0.1
 theta = thetaCore, log_n0, p, log_epsilon_e, log_epsilon_B, log_E0, thetaObs, xi_N, d_L, z
 
