@@ -7,12 +7,12 @@ from scipy.optimize import curve_fit
 import sampler_v2 as splr
 import os
 
-identifier = 'control'
+identifier = '170817'
 # 0 [thetaCore, n0, p, epsilon_e, epsilon_B, E0]
 # 1 [thetaCore, p, epsilon_e, epsilon_B, E0, n0]
-labels_layout = 0
+labels_layout = 1
 # Import samples
-file_path = f'../../../Large_data/{identifier}_samples.h5' 
+file_path = f'/data/PROJECTS/2024-25/cjc233/Large_data/{identifier}_samples.h5' 
 if not os.path.exists(file_path):
     raise FileNotFoundError(f"The HDF5 file '{file_path}' does not exist.")
 backend = emcee.backends.HDFBackend(file_path)
@@ -73,13 +73,13 @@ with open(output_file, "w") as f:
             f.write(f"{label}: {mcmc[i][1]:.3e} +{q[i][0]:.3e} -{q[i][1]:.3e}\n")
 f.close()
 # Import data
-time, freq, flux, flux_err = np.genfromtxt(f'../Data_Generation/data/{identifier}_data.csv', delimiter=',', skip_header=1, unpack=True)
-
+time, freq, flux, UB_err,LB_err = np.genfromtxt(f'../data_generation_v1/data/{identifier}_data.csv', delimiter=',', skip_header=1, unpack=True)
+flux_err = LB_err,UB_err
 # Set values
 t_uniform = np.geomspace(min(time), max(time), num=50)
 xi_N = 1.0
-d_L = 4.88e28
-z = 2.0
+d_L = 1.327e+26
+z = 0.0099
 
 # Get best-fit parameters
 if labels_layout == 0:
@@ -103,7 +103,7 @@ for nu_value in unique_freqs:
     mask = freq == nu_value
     t_filtered = time[mask]
     flux_filtered = flux[mask]
-    flux_err_filtered = flux_err[mask]
+    flux_err_filtered = LB_err[mask],UB_err[mask]
 
     # Plot the observational data for this frequency
     ax.errorbar(

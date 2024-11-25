@@ -53,7 +53,7 @@ def autocorr_new(y, c=5.0):
     window = auto_window(taus, c)
     return taus[window]
 
-identifier = "170817"  # Set your identifier here
+identifier = "GRB2_CO"  # Set your identifier here
 
 file_path = f'/data/PROJECTS/2024-25/cjc233/Large_data/{identifier}_samples.h5'
 if not os.path.exists(file_path):
