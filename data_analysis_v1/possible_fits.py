@@ -4,10 +4,10 @@ import emcee
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize
 from scipy.optimize import curve_fit
-import sampler_v2 as splr
+import sampler_v4 as splr
 import os
 
-identifier = '170817'
+identifier = 'GRB2_GA'
 # 0 [thetaCore, n0, p, epsilon_e, epsilon_B, E0]
 # 1 [thetaCore, p, epsilon_e, epsilon_B, E0, n0]
 labels_layout = 1
@@ -73,13 +73,14 @@ with open(output_file, "w") as f:
             f.write(f"{label}: {mcmc[i][1]:.3e} +{q[i][0]:.3e} -{q[i][1]:.3e}\n")
 f.close()
 # Import data
-time, freq, flux, UB_err,LB_err = np.genfromtxt(f'../data_generation_v1/data/{identifier}_data.csv', delimiter=',', skip_header=1, unpack=True)
+time, freq, flux, UB_err,LB_err = np.genfromtxt(f'../data_generation_v1/data/GRB2_control_data.csv', delimiter=',', skip_header=1, unpack=True)
 flux_err = LB_err,UB_err
 # Set values
 t_uniform = np.geomspace(min(time), max(time), num=50)
+jet_type = grb.jet.Gaussian
 xi_N = 1.0
-d_L = 1.327e+26
-z = 0.0099
+d_L = 1.34e+26
+z = 0.01
 
 # Get best-fit parameters
 if labels_layout == 0:
@@ -122,7 +123,7 @@ freq_uniform = np.array(freq_uniform)
 
 # Prepare the input for Flux calculation
 x_uniform = [t_uniform, freq_uniform]
-best = np.array(splr.Flux(x_uniform,thetaCore, np.log10(n0), p, np.log10(epsilon_e), np.log10(epsilon_B), np.log10(E0),thetaObs, xi_N, d_L, z))
+best = np.array(splr.Flux(x_uniform,thetaCore, np.log10(n0), p, np.log10(epsilon_e), np.log10(epsilon_B), np.log10(E0),thetaObs, xi_N, d_L, z,jet_type))
 
 
 # Plot the best-fit model
@@ -150,7 +151,7 @@ for ind in inds:
         thetaObs = 0.0
 
     # Calculate flux for this sample
-    y_sample = splr.Flux(x_uniform,thetaCore, n0, p, epsilon_e, epsilon_B, E0,thetaObs, xi_N, d_L, z)
+    y_sample = splr.Flux(x_uniform,thetaCore, n0, p, epsilon_e, epsilon_B, E0,thetaObs, xi_N, d_L, z,jet_type)
     y_sample = np.array(y_sample)
 
     # Plot the sampled model for each frequency

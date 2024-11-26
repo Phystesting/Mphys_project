@@ -43,8 +43,12 @@ def Flux(x, thetaCore, log_n0, p, log_epsilon_e, log_epsilon_B, log_E0, thetaObs
 
     return Flux
 
+# Global flag to track the first iteration
+first_iteration_flag = True
 
 def log_likelihood(theta, x, y, err_flux, param_names, fixed_params, xi_N, d_L, z, jet_type):
+    global first_iteration_flag
+
     # Create a dictionary for the combined parameters
     params = {name: value for name, value in zip(param_names, theta)}
     params.update(fixed_params)
@@ -61,28 +65,39 @@ def log_likelihood(theta, x, y, err_flux, param_names, fixed_params, xi_N, d_L, 
     # Calculate the model flux
     try:
         model = Flux(x, thetaCore, log_n0, p, log_epsilon_e, log_epsilon_B, log_E0, thetaObs, xi_N, d_L, z, jet_type)
-        #print(model)
         log_model = np.log(model)
         if not np.isfinite(log_model).all():
             raise ValueError("Model log-flux contains non-finite values.")
     except Exception as e:
-        #print(f"Error in log-likelihood flux calculation: {e}")
+        if first_iteration_flag:
+            print(f"Error in log-likelihood flux calculation: {e}")
         return -1e10  # Return a very large negative log-likelihood
 
     log_y = np.log(y)
     Lb_err, Ub_err = err_flux
-    
+
     # Convert errors to log space for fitting
     log_Ub_err = abs(np.log(y + Ub_err) - log_y)
     log_Lb_err = abs(np.log(y - Lb_err) - log_y)
-    
+
     # Select error for this iteration
     log_err = np.where(log_model > log_y, log_Ub_err, log_Lb_err)
-    
+
     # Calculate the combined error term
     sigma2 = log_err**2
-    #print(-0.5 * np.sum((log_y - log_model)**2 / sigma2))
+
+    # Print detailed logs only for the first iteration
+    if first_iteration_flag:
+        print(f"Theta: {theta}")
+        print(f"Model: {model}")
+        print(f"Log-Model: {log_model}")
+        print(f"Log-Y: {log_y}")
+        print(f"Errors (Lower/Upper): {log_Lb_err}/{log_Ub_err}")
+        print(f"Sigma^2: {sigma2}")
+        first_iteration_flag = False  # Disable logging for subsequent calls
+
     return -0.5 * np.sum((log_y - log_model)**2 / sigma2)
+
 
 
 def log_prior(theta, param_names):

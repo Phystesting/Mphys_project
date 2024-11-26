@@ -1,5 +1,6 @@
-import sampler_v3 as splr
+import sampler_v4 as splr
 import numpy as np
+import afterglowpy as grb
 
 # Define your fixed parameters separately
 fixed_params = {
@@ -23,7 +24,8 @@ d_L = 1.43e+27
 xi_N = 1.0
 nwalkers = 32
 processes = 40
-steps = 50000
+steps = 20000
+jet_type = grb.jet.TopHat
 filename = '/data/PROJECTS/2024-25/cjc233/Large_data/GRB3_samples.h5'
 
 # Unpack data
@@ -33,4 +35,4 @@ flux_err = Lb_err, Ub_err
 #splr.run_optimization([time,freq], flux, initial,fixed_params, flux_err, xi_N, d_L, z)
 
 if __name__ == "__main__":
-    splr.run_sampling(x=[time,freq], y=flux, initial=initial,fixed_params=fixed_params, err_flux=flux_err, xi_N=xi_N, d_L=d_L, z=z, nwalkers=nwalkers, steps=steps, processes=processes,filename=filename)
+    splr.run_sampling(x=[time,freq], y=flux, initial=initial,fixed_params=fixed_params, err_flux=flux_err, xi_N=xi_N, d_L=d_L, z=z, nwalkers=nwalkers, steps=steps, processes=processes,filename=filename,jet_type=jet_type)
