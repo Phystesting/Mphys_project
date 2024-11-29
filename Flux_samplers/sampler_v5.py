@@ -7,7 +7,6 @@ from multiprocessing import Pool
 import time
 from functools import partial
 import concurrent.futures
-from scipy.stats import norm
 
 
 def Flux(x, thetaCore, log_n0, p, log_epsilon_e, log_epsilon_B, log_E0, thetaObs, xi_N, d_L, z, jet_type):
@@ -62,60 +61,28 @@ def log_likelihood(theta, x, y, err_flux, param_names, fixed_params, xi_N, d_L, 
     # Calculate the model flux
     try:
         model = Flux(x, thetaCore, log_n0, p, log_epsilon_e, log_epsilon_B, log_E0, thetaObs, xi_N, d_L, z, jet_type)
+        #print(model)
         log_model = np.log(model)
         if not np.isfinite(log_model).all():
             raise ValueError("Model log-flux contains non-finite values.")
     except Exception as e:
-        return -1e10  # Return a very large negative log-likelihood in case of error
+        #print(f"Error in log-likelihood flux calculation: {e}")
+        return -1e10  # Return a very large negative log-likelihood
 
     log_y = np.log(y)
     Lb_err, Ub_err = err_flux
     
-    # Initialize log likelihood
-    log_likelihood = 0.0
+    # Convert errors to log space for fitting
+    log_Ub_err = abs(np.log(y + Ub_err) - log_y)
+    log_Lb_err = abs(np.log(y - Lb_err) - log_y)
     
-    # Separate normal points from upper limits (where Lb_err == y)
-    upper_limit_mask = (Lb_err == y)
-
-    # For normal points (not upper limits)
-    normal_mask = ~upper_limit_mask
-
-    # Initialize log error arrays to store errors for each point
-    log_Ub_err = np.zeros_like(log_y)
-    log_Lb_err = np.zeros_like(log_y)
-
-    # Only calculate log errors for non-upper limit points
-    for i in range(len(y)):
-        if normal_mask[i]:
-            if (y[i] + Ub_err[i] > 0):  # Avoid log(0) or log of negative values
-                log_Ub_err[i] = abs(np.log(y[i] + Ub_err[i]) - log_y[i])
-            else:
-                log_Ub_err[i] = np.inf  # Assign a very large number if log is not defined
-
-            if (y[i] - Lb_err[i] > 0):  # Avoid log(0) or log of negative values
-                log_Lb_err[i] = abs(np.log(y[i] - Lb_err[i]) - log_y[i])
-            else:
-                log_Lb_err[i] = np.inf  # Assign a very large number if log is not defined
-
-    # Combine errors for normal points
-    log_err_normal = np.where(log_model > log_y, log_Ub_err, log_Lb_err)
-    sigma2_normal = log_err_normal**2
-
-    # Calculate log likelihood for normal points
-    log_likelihood_normal = -0.5 * np.sum((log_y[normal_mask] - log_model[normal_mask])**2 / sigma2_normal[normal_mask])
-    log_likelihood += log_likelihood_normal
-
-    # For upper limit points (where Lb_err == y), use CDF for likelihood calculation
-    for i, is_upper_limit in enumerate(upper_limit_mask):
-        if is_upper_limit:
-            # Upper limit is handled using the CDF of the model
-            limit = np.log(y[i]) # Assume that the flux limit is given as an upper bound
-            log_likelihood_upper = np.log(norm.cdf((limit - log_model[i])))
-            log_likelihood += log_likelihood_upper
+    # Select error for this iteration
+    log_err = np.where(log_model > log_y, log_Ub_err, log_Lb_err)
     
-    return log_likelihood
-
-
+    # Calculate the combined error term
+    sigma2 = log_err**2
+    #print(-0.5 * np.sum((log_y - log_model)**2 / sigma2))
+    return -0.5 * np.sum((log_y - log_model)**2 / sigma2)
 
 
 def log_prior(theta, param_names):

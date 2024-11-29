@@ -11,7 +11,7 @@ rng = np.random.default_rng(seed)
 def Flux(x, thetaCore, log_n0, p, log_epsilon_e, log_epsilon_B, log_E0, thetaObs, xi_N, d_L, z):
     # Function to calculate the model
     Z = {
-        'jetType': grb.jet.GaussianCore,
+        'jetType': grb.jet.Gaussian,
         'specType': grb.jet.SimpleSpec,
         'thetaObs': thetaObs,
         'E0': 10**log_E0,
@@ -256,7 +256,7 @@ generated_data = pd.DataFrame({
 })
 
 # Save the generated data to a CSV file
-generated_data.to_csv('./data/GRB3_control_data.csv', index=False)
+generated_data.to_csv('./data/test_data.csv', index=False)
 
 unique_freqs = np.unique(freq_values)
 # Create a colormap instance
@@ -301,7 +301,7 @@ plt.yscale('log')
 plt.grid(True)
 
 # Save the plot
-plt.savefig('./graph/GRB3_control_figure.png')
+plt.savefig('./graph/test_figure.png')
 # Display the plot
 plt.show()
 
