@@ -151,18 +151,21 @@ selected_instruments = ['Chandra']
 # Path to your input CSV file
 data_file = './data/combined_statistics.csv'
 
-thetaCore = 0.1
-log_n0 = 7.0
-p = 2.2
+log_E0 = 52
+thetaCore = 0.05
+thetaObs = 0.1
+thetaWing =  4*thetaCore
+log_n0 = 0.0
+p = 2.33
 log_epsilon_e = -1.0
 log_epsilon_B = -3.0
-log_E0 = 51.0
-thetaObs = 0.15
 xi_N = 1.0
 d_L = 1.43e+27
 z = 0.1
 theta = thetaCore, log_n0, p, log_epsilon_e, log_epsilon_B, log_E0, thetaObs, xi_N, d_L, z
-
+mp = 1.67e-24
+c = 3e10
+Gamma = ((10**log_E0)/((10**log_n0)*mp*(c**5)))**(1/8)
 tbi = 2.95*(((10**log_E0)/(1e53))**(1/3))*((10**log_n0)**(-1/3))*((thetaCore/0.1)**(8/3))*86400
 tbo = 24.9*(((10**log_E0)/(1e53))**(1/3))*((10**log_n0)**(-1/3))*(((thetaObs+1.24*thetaCore)/0.5)**(8/3))*86400
 
@@ -170,7 +173,7 @@ if thetaObs < 1.01*thetaCore:
     tb = tbi
 else:
     tb = tbo
-print(np.log10(tb))
+print(Gamma,np.log10(tb))
 
 # Function to introduce gaps in optical data
 def introduce_optical_gaps(time_values, freq_values, flux_values, UB_err, LB_err, optical_min_freq, optical_max_freq):
@@ -183,8 +186,8 @@ def introduce_optical_gaps(time_values, freq_values, flux_values, UB_err, LB_err
         return time_values, freq_values, flux_values, UB_err, LB_err
 
     # Define the mean and standard deviation for the gap length (in seconds)
-    mean_gap_duration = 3 * 3600  # 5 hours in seconds
-    std_gap_duration = 1 * 3600  # 2 hours in seconds
+    mean_gap_duration = 3 * 3600  # 3 hours in seconds
+    std_gap_duration = 1 * 3600  # 1 hours in seconds
 
     # Define minimum spacing between gap starts (in seconds)
     min_spacing = 2 * 3600  # 4 hours in seconds
@@ -256,7 +259,7 @@ generated_data = pd.DataFrame({
 })
 
 # Save the generated data to a CSV file
-generated_data.to_csv('./data/test_data.csv', index=False)
+generated_data.to_csv('./data/GRB6_data.csv', index=False)
 
 unique_freqs = np.unique(freq_values)
 # Create a colormap instance
@@ -301,7 +304,7 @@ plt.yscale('log')
 plt.grid(True)
 
 # Save the plot
-plt.savefig('./graph/test_figure.png')
+plt.savefig('./graph/GRB6_figure.png')
 # Display the plot
 plt.show()
 

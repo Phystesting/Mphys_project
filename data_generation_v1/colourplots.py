@@ -38,15 +38,16 @@ def Flux(x, thetaCore, log_n0, p, log_epsilon_e, log_epsilon_B, log_E0, thetaObs
 
     return Flux
 
-thetaCore = 0.1
-log_n0 = 7.0
-p = 2.2
-log_epsilon_e = -1.0
-log_epsilon_B = -3.0
-log_E0 = 51.0
-thetaObs = 0.15
+log_E0 = 52
+thetaCore = 0.05
+thetaObs = 0.1
+thetaWing =  4*thetaCore
+log_n0 = 0.0
+p = 2.33
+log_epsilon_e = -0.5
+log_epsilon_B = -2.0
 xi_N = 1.0
-d_L = 1.43e+26
+d_L = 1.43e+27
 z = 0.1
 unique_nu = np.geomspace(1e8, 1e20, 100)
 unique_t = np.geomspace(1e1, 1e8, 100)

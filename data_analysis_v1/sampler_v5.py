@@ -86,7 +86,7 @@ def log_likelihood(theta, x, y, err_flux, param_names, fixed_params, xi_N, d_L, 
 
 
 def log_prior(theta, param_names):
-    mp = 1.67e27 # kg
+    mp = 1.67e-24 # g
     c = 3e10 # cm/s
     priors = {
         "thetaCore": (0.01, np.pi * 0.5),
@@ -106,14 +106,15 @@ def log_prior(theta, param_names):
     E0 = 10**param_dict.get("log_E0")
     n0 = 10**param_dict.get("log_n0")
     Gamma = (E0/(n0*mp*(c**5)))**(1/8) #calculate lorentz factor at t = 1s
-    
-    return -(np.exp((Gamma-1000)/200)+np.exp(-(Gamma-100)/10))  # discourages Lorentz values above 2000 and below 100
+    print(Gamma)
+    return -(np.exp((Gamma-1000)/100)+np.exp(-(Gamma-100)/10))  # discourages Lorentz values above 2000 and below 100
 
 
 def log_probability(theta, x, y, err_flux, param_names, fixed_params, xi_N, d_L, z, jet_type):
     lp = log_prior(theta, param_names)
     if not np.isfinite(lp):
         return -np.inf
+    print(lp,log_likelihood(theta, x, y, err_flux, param_names, fixed_params, xi_N, d_L, z, jet_type))
     return lp + log_likelihood(theta, x, y, err_flux, param_names, fixed_params, xi_N, d_L, z, jet_type)
 
 
@@ -177,3 +178,32 @@ def run_sampling(x, y, initial, fixed_params, err_flux, xi_N, d_L, z, jet_type, 
 
     print("Sampling complete.")
     return sampler
+
+# Define inputs
+z = 0.0099
+d_L = 1.327e+26
+xi_N = 1.0
+nwalkers = 32
+processes = 2
+steps = 10
+jet_type = grb.jet.Gaussian
+filename = '../../../Large_data/170817_GA5_samples.h5'
+
+initial = {
+    "thetaCore": 0.14,
+    "p": 2.14,
+    "log_epsilon_e": -1.2,
+    "log_epsilon_B": -3.6,
+    "log_E0": 52.3,
+    "log_n0": -1.2,
+    "thetaObs": 0.75,
+}
+param_names = list(initial.keys())
+theta = list(initial.values())
+fixed_params = {
+}
+time, freq, flux, UB_err, LB_err = np.genfromtxt('../data_generation_v1/data/170817_data.csv',delimiter=',',skip_header=1,unpack=True)
+flux_err = LB_err, UB_err
+ll = log_likelihood(theta, [time,freq], flux, flux_err, param_names, fixed_params, xi_N, d_L, z, jet_type)
+lp = log_prior(theta,param_names)    
+print(ll,lp)
