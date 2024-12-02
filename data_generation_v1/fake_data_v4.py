@@ -151,11 +151,11 @@ selected_instruments = ['Chandra']
 # Path to your input CSV file
 data_file = './data/combined_statistics.csv'
 
-log_E0 = 52
-thetaCore = 0.05
-thetaObs = 0.1
+log_E0 = 53
+thetaCore = 0.2
+thetaObs = 0.8
 thetaWing =  4*thetaCore
-log_n0 = 0.0
+log_n0 = -1.0
 p = 2.33
 log_epsilon_e = -1.0
 log_epsilon_B = -3.0
@@ -259,7 +259,7 @@ generated_data = pd.DataFrame({
 })
 
 # Save the generated data to a CSV file
-generated_data.to_csv('./data/GRB6_data.csv', index=False)
+generated_data.to_csv('./data/GRB10_data.csv', index=False)
 
 unique_freqs = np.unique(freq_values)
 # Create a colormap instance
@@ -304,7 +304,7 @@ plt.yscale('log')
 plt.grid(True)
 
 # Save the plot
-plt.savefig('./graph/GRB6_figure.png')
+plt.savefig('./graph/GRB10_figure.png')
 # Display the plot
 plt.show()
 

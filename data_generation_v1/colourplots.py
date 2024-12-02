@@ -38,14 +38,14 @@ def Flux(x, thetaCore, log_n0, p, log_epsilon_e, log_epsilon_B, log_E0, thetaObs
 
     return Flux
 
-log_E0 = 52
-thetaCore = 0.05
-thetaObs = 0.1
+log_E0 = 53
+thetaCore = 0.2
+thetaObs = 0.8
 thetaWing =  4*thetaCore
-log_n0 = 0.0
+log_n0 = -2.0
 p = 2.33
-log_epsilon_e = -0.5
-log_epsilon_B = -2.0
+log_epsilon_e = -1.0
+log_epsilon_B = -3.0
 xi_N = 1.0
 d_L = 1.43e+27
 z = 0.1

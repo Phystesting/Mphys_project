@@ -1,13 +1,13 @@
-GRB5 slightly off axis aka still within jet at t=0 but not centre
+GRB5 slightly off axis no spectral breaks
 GaussianCore jet structure
-log_E0 = 52
+log_E0 = 53
 thetaCore = 0.05
 thetaObs = 0.1
 thetaWing =  4*thetaCore
 log_n0 = 0.0
 p = 2.33
-log_epsilon_e = -1.0
-log_epsilon_B = -3.0
+log_epsilon_e = -3.0
+log_epsilon_B = -4.0
 xi_N = 1.0
 d_L = 1.43e+27
 z = 0.1
