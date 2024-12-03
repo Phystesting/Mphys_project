@@ -4,7 +4,7 @@ import afterglowpy as grb
 
 # Define your fixed parameters separately
 fixed_params = {
-
+    "thetaObs": 0.6,
 }
 
 # Define your initial guesses for the fitting parameters
@@ -15,7 +15,7 @@ initial = {
     "log_epsilon_B": -3.0,
     "log_E0": 53.0,
     "log_n0": -3.0,
-    "thetaObs": 0.6,
+    
 
 }
 
@@ -25,9 +25,9 @@ d_L = 1.34e+26
 xi_N = 1.0
 nwalkers = 32
 processes = 40
-steps = 30000
+steps = 20000
 jet_type = grb.jet.Gaussian
-filename = '/data/PROJECTS/2024-25/cjc233/Large_data/GRB2_GA_samples.h5'
+filename = '/data/PROJECTS/2024-25/cjc233/Large_data/GRB2_GACO_samples.h5'
 
 # Unpack data
 time, freq, flux, Ub_err, Lb_err = np.genfromtxt('../data_generation_v1/data/GRB2_control_data.csv',delimiter=',',skip_header=1,unpack=True)

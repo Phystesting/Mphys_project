@@ -7,7 +7,7 @@ from scipy.optimize import curve_fit
 import sampler_v4 as splr
 import os
 
-identifier = 'GRB2_GA'
+identifier = '170817_GA5'
 # 0 [thetaCore, n0, p, epsilon_e, epsilon_B, E0]
 # 1 [thetaCore, p, epsilon_e, epsilon_B, E0, n0]
 labels_layout = 1
@@ -73,14 +73,14 @@ with open(output_file, "w") as f:
             f.write(f"{label}: {mcmc[i][1]:.3e} +{q[i][0]:.3e} -{q[i][1]:.3e}\n")
 f.close()
 # Import data
-time, freq, flux, UB_err,LB_err = np.genfromtxt(f'../data_generation_v1/data/GRB2_control_data.csv', delimiter=',', skip_header=1, unpack=True)
+time, freq, flux, UB_err,LB_err = np.genfromtxt(f'../data_generation_v1/data/170817_data.csv', delimiter=',', skip_header=1, unpack=True)
 flux_err = LB_err,UB_err
 # Set values
 t_uniform = np.geomspace(min(time), max(time), num=50)
 jet_type = grb.jet.Gaussian
 xi_N = 1.0
-d_L = 1.34e+26
-z = 0.01
+d_L = 1.327e+26
+z = 0.099
 
 # Get best-fit parameters
 if labels_layout == 0:

@@ -1,6 +1,5 @@
-import sampler_v5 as splr
+import sampler_v3 as splr
 import numpy as np
-import afterglowpy as grb
 
 # Define your fixed parameters separately
 fixed_params = {
@@ -24,7 +23,7 @@ d_L = 1.327e+26
 xi_N = 1.0
 nwalkers = 32
 processes = 40
-steps = 100
+steps = 500000
 filename = '/data/PROJECTS/2024-25/cjc233/Large_data/170817_samples.h5'
 
 # Unpack data

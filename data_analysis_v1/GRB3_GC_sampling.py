@@ -25,7 +25,7 @@ d_L = 1.43e+27
 xi_N = 1.0
 nwalkers = 32
 processes = 40
-steps = 20000
+steps = 40000
 jet_type = grb.jet.GaussianCore
 filename = '/data/PROJECTS/2024-25/cjc233/Large_data/GRB3_GC_samples.h5'
 

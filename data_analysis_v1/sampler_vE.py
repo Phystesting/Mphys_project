@@ -7,18 +7,16 @@ from multiprocessing import Pool
 import time
 from functools import partial
 import concurrent.futures
-from scipy.stats import norm
 
 
-def Flux(x, thetaCore, log_n0, p, log_epsilon_e, log_epsilon_B, log_E0, thetaObs, xi_N, d_L, z, jet_type):
+def Flux(x, thetaCore, log_n0, p, log_epsilon_e, log_epsilon_B, log_E0, thetaObs, xi_N, d_L, z):
     # Function to calculate the model
     Z = {
-        'jetType': jet_type,  # Use the input jet type
+        'jetType': grb.jet.TopHat,
         'specType': grb.jet.SimpleSpec,
         'thetaObs': thetaObs,
         'E0': 10**log_E0,
         'thetaCore': thetaCore,
-        'thetaWing': 4*thetaCore,
         'n0': 10**log_n0,
         'p': p,
         'epsilon_e': 10**log_epsilon_e,
@@ -29,23 +27,12 @@ def Flux(x, thetaCore, log_n0, p, log_epsilon_e, log_epsilon_B, log_E0, thetaObs
     }
     t = x[0]
     nu = x[1]
-
-    try:
-        Flux = grb.fluxDensity(t, nu, **Z)
-        # Check if all elements of Flux are finite
-        if isinstance(Flux, np.ndarray):
-            if not np.all(np.isfinite(Flux)):
-                raise ValueError("Flux computation returned non-finite values.")
-        elif not np.isfinite(Flux):
-            raise ValueError("Flux computation returned a non-finite value.")
-    except Exception as e:
-        print(f"Error in fluxDensity computation: {e}")
-        return np.full_like(t, 1e-300)  # Return a very small flux value
-
+    Flux = grb.fluxDensity(t, nu, **Z)
     return Flux
 
 
-def log_likelihood(theta, x, y, err_flux, param_names, fixed_params, xi_N, d_L, z, jet_type):
+def log_likelihood(theta, x, y, err_flux, param_names, fixed_params, xi_N, d_L, z):
+
     # Create a dictionary for the combined parameters
     params = {name: value for name, value in zip(param_names, theta)}
     params.update(fixed_params)
@@ -60,67 +47,33 @@ def log_likelihood(theta, x, y, err_flux, param_names, fixed_params, xi_N, d_L, 
     thetaObs = params["thetaObs"]
 
     # Calculate the model flux
-    try:
-        model = Flux(x, thetaCore, log_n0, p, log_epsilon_e, log_epsilon_B, log_E0, thetaObs, xi_N, d_L, z, jet_type)
-        log_model = np.log(model)
-        if not np.isfinite(log_model).all():
-            raise ValueError("Model log-flux contains non-finite values.")
-    except Exception as e:
-        return -1e10  # Return a very large negative log-likelihood in case of error
+    model = Flux(x, thetaCore, log_n0, p, log_epsilon_e, log_epsilon_B, log_E0, thetaObs, xi_N, d_L, z)
+    log_model = np.log(model)
+
+    if not np.all(np.isfinite(log_model)):
+        raise ValueError("Model returned non-finite values.")
 
     log_y = np.log(y)
+
+    # Convert errors to log space
     Lb_err, Ub_err = err_flux
-    
-    # Initialize log likelihood
-    log_likelihood = 0.0
-    
-    # Separate normal points from upper limits (where Lb_err == y)
-    upper_limit_mask = (Lb_err == y)
+    log_Ub_err = np.abs(np.log(y + Ub_err) - log_y)
+    log_Lb_err = np.where(Lb_err == y, np.inf, np.abs(np.log(y - Lb_err) - log_y))
+    #print(log_Lb_err)
+    # Select errors for the current iteration
+    log_err = np.where(model > log_y, log_Ub_err, log_Lb_err)
 
-    # For normal points (not upper limits)
-    normal_mask = ~upper_limit_mask
+    mask = log_err != np.inf
 
-    # Initialize log error arrays to store errors for each point
-    log_Ub_err = np.zeros_like(log_y)
-    log_Lb_err = np.zeros_like(log_y)
-
-    # Only calculate log errors for non-upper limit points
-    for i in range(len(y)):
-        if normal_mask[i]:
-            if (y[i] + Ub_err[i] > 0):  # Avoid log(0) or log of negative values
-                log_Ub_err[i] = abs(np.log(y[i] + Ub_err[i]) - log_y[i])
-            else:
-                log_Ub_err[i] = np.inf  # Assign a very large number if log is not defined
-
-            if (y[i] - Lb_err[i] > 0):  # Avoid log(0) or log of negative values
-                log_Lb_err[i] = abs(np.log(y[i] - Lb_err[i]) - log_y[i])
-            else:
-                log_Lb_err[i] = np.inf  # Assign a very large number if log is not defined
-
-    # Combine errors for normal points
-    log_err_normal = np.where(log_model > log_y, log_Ub_err, log_Lb_err)
-    sigma2_normal = log_err_normal**2
-
-    # Calculate log likelihood for normal points
-    log_likelihood_normal = -0.5 * np.sum((log_y[normal_mask] - log_model[normal_mask])**2 / sigma2_normal[normal_mask])
-    log_likelihood += log_likelihood_normal
-
-    # For upper limit points (where Lb_err == y), use CDF for likelihood calculation
-    for i, is_upper_limit in enumerate(upper_limit_mask):
-        if is_upper_limit:
-            # Upper limit is handled using the CDF of the model
-            limit = np.log(y[i]) # Assume that the flux limit is given as an upper bound
-            log_likelihood_upper = np.log(norm.cdf((limit - log_model[i])))
-            log_likelihood += log_likelihood_upper
-    
-    return log_likelihood
-
+    # Perform the calculation only when no log_err values are zero
+    sigma2 = log_err[mask]**2
+    log_likelihood_value = -0.5*sum(np.where(log_err == 0 ,np.exp((log_y[mask] - log_model[mask])),(log_y[mask] - log_model[mask])**2 / sigma2))
+    print(log_likelihood_value)
+    return log_likelihood_value
 
 
 
 def log_prior(theta, param_names):
-    mp = 1.67e27 # kg
-    c = 3e10 # cm/s
     priors = {
         "thetaCore": (0.01, np.pi * 0.5),
         "log_n0": (-10.0, 10.0),
@@ -135,23 +88,20 @@ def log_prior(theta, param_names):
         low, high = priors[name]
         if not (low < value < high):
             return -np.inf  # Outside bounds
-    param_dict = dict(zip(param_names, theta))
-    E0 = 10**param_dict.get("log_E0")
-    n0 = 10**param_dict.get("log_n0")
-    Gamma = (E0/(n0*mp*(c**5)))**(1/8) #calculate lorentz factor at t = 1s
     
-    return -(np.exp((Gamma-1000)/200)+np.exp(-(Gamma-100)/10))  # discourages Lorentz values above 2000 and below 100
+    return 0.0  # Uniform prior within bounds
 
 
-def log_probability(theta, x, y, err_flux, param_names, fixed_params, xi_N, d_L, z, jet_type):
+def log_probability(theta, x, y, err_flux, param_names, fixed_params, xi_N, d_L, z):
     lp = log_prior(theta, param_names)
     if not np.isfinite(lp):
         return -np.inf
-    return lp + log_likelihood(theta, x, y, err_flux, param_names, fixed_params, xi_N, d_L, z, jet_type)
+    return lp + log_likelihood(theta, x, y, err_flux, param_names, fixed_params, xi_N, d_L, z)
 
 
-def run_optimization(x, y, initial, fixed_params, err_flux, xi_N, d_L, z, jet_type):
+def run_optimization(x, y, initial,fixed_params, err_flux, xi_N, d_L, z):
     # Split into fitting and fixed parameters
+
     param_names = list(initial.keys())
     initial_guesses = list(initial.values())
 
@@ -167,7 +117,7 @@ def run_optimization(x, y, initial, fixed_params, err_flux, xi_N, d_L, z, jet_ty
     fit_bounds = [bounds[param] for param in param_names]
 
     likelihood = partial(
-        log_likelihood, param_names=param_names, fixed_params=fixed_params, xi_N=xi_N, d_L=d_L, z=z, jet_type=jet_type
+        log_likelihood, param_names=param_names, fixed_params=fixed_params, xi_N=xi_N, d_L=d_L, z=z
     )
     nll = lambda *args: -likelihood(*args)
     result = minimize(nll, initial_guesses, args=(x, y, err_flux), bounds=fit_bounds, method="L-BFGS-B")
@@ -180,7 +130,8 @@ def run_optimization(x, y, initial, fixed_params, err_flux, xi_N, d_L, z, jet_ty
     return result
 
 
-def run_sampling(x, y, initial, fixed_params, err_flux, xi_N, d_L, z, jet_type, nwalkers, steps, processes, filename):
+def run_sampling(x, y, initial,fixed_params, err_flux, xi_N, d_L, z, nwalkers, steps, processes,filename):
+
     param_names = list(initial.keys())
     initial_guesses = list(initial.values())
 
@@ -188,7 +139,7 @@ def run_sampling(x, y, initial, fixed_params, err_flux, xi_N, d_L, z, jet_type, 
     pos = initial_guesses + 1e-4 * np.random.randn(nwalkers, ndim)
 
     log_prob = partial(
-        log_probability, param_names=param_names, fixed_params=fixed_params, xi_N=xi_N, d_L=d_L, z=z, jet_type=jet_type
+        log_probability, param_names=param_names, fixed_params=fixed_params, xi_N=xi_N, d_L=d_L, z=z
     )
     # Set up the backend
     backend = emcee.backends.HDFBackend(filename)
@@ -200,13 +151,14 @@ def run_sampling(x, y, initial, fixed_params, err_flux, xi_N, d_L, z, jet_type, 
         # If no previous sampling exists in the file, initialize the walkers
         print("No previous sampling found in the file. Starting fresh.")
         print("Finding optimal starting parameters...")
-        soln = run_optimization(x, y, initial, fixed_params, err_flux, xi_N, d_L, z, jet_type)
+        soln = run_optimization(x, y, initial,fixed_params,err_flux,xi_N,d_L,z)
         pos = soln.x + 1e-4 * np.random.randn(nwalkers, ndim)
         backend.reset(nwalkers, ndim)
 
     with Pool(processes=processes) as pool:
-        sampler = emcee.EnsembleSampler(nwalkers, ndim, log_prob, args=(x, y, err_flux), pool=pool, backend=backend)
+        sampler = emcee.EnsembleSampler(nwalkers, ndim, log_prob, args=(x, y, err_flux), pool=pool,backend=backend)
         sampler.run_mcmc(pos, steps, progress=True)
 
     print("Sampling complete.")
     return sampler
+
