@@ -42,13 +42,41 @@ def Flux(x, thetaCore, log_n0, p, log_epsilon_e, log_epsilon_B, log_E0, thetaObs
 
     return Flux
 
-# Function to generate realistic data
+def estimate_errors(data, target_freq):
+    """
+    Estimate errors for a given frequency based on the nearest available frequencies in the dataset.
+    """
+    # Sort the data by frequency
+    sorted_data = data.sort_values('Frequency (Hz)')
+    
+    # Find the nearest frequencies
+    lower_band = sorted_data[sorted_data['Frequency (Hz)'] < target_freq].tail(1)
+    upper_band = sorted_data[sorted_data['Frequency (Hz)'] > target_freq].head(1)
+    
+    # If both bounds are available, interpolate
+    if not lower_band.empty and not upper_band.empty:
+        f1, f2 = lower_band['Frequency (Hz)'].values[0], upper_band['Frequency (Hz)'].values[0]
+        UB1, UB2 = lower_band['UB_err_mean'].values[0], upper_band['UB_err_mean'].values[0]
+        LB1, LB2 = lower_band['LB_err_mean'].values[0], upper_band['LB_err_mean'].values[0]
+        
+        UB_err_mean = UB1 + (UB2 - UB1) * (target_freq - f1) / (f2 - f1)
+        LB_err_mean = LB1 + (LB2 - LB1) * (target_freq - f1) / (f2 - f1)
+    elif not lower_band.empty:  # Use only the lower bound
+        UB_err_mean = lower_band['UB_err_mean'].values[0]
+        LB_err_mean = lower_band['LB_err_mean'].values[0]
+    elif not upper_band.empty:  # Use only the upper bound
+        UB_err_mean = upper_band['UB_err_mean'].values[0]
+        LB_err_mean = upper_band['LB_err_mean'].values[0]
+    else:  # Default fallback
+        UB_err_mean = LB_err_mean = 0.01  # A default small error value
+    
+    return UB_err_mean, LB_err_mean
+
 # Function to generate realistic data
 def generate_realistic_data(theta, data_file, frequencies=None, instruments=None, flux_cutoff=True):
-    time_min = -1
-    time_max = 1e10
     # Unpack simulated GRB properties
     thetaCore, log_n0, p, log_epsilon_e, log_epsilon_B, log_E0, thetaObs, xi_N, d_L, z = theta
+    
     # Load the input data from CSV file
     data = pd.read_csv(data_file)
 
@@ -57,45 +85,58 @@ def generate_realistic_data(theta, data_file, frequencies=None, instruments=None
     flux_values = []
     UB_err = []
     LB_err = []
+
+    if frequencies:
+        for freq in frequencies:
+            if freq not in data['Frequency (Hz)'].values:
+                # Find the closest matching frequency band
+                sorted_data = data.sort_values('Frequency (Hz)')
+                lower_band = sorted_data[sorted_data['Frequency (Hz)'] < freq].tail(1)
+                upper_band = sorted_data[sorted_data['Frequency (Hz)'] > freq].head(1)
+
+                # Use Min_Flux from the closest frequency band
+                if not lower_band.empty:
+                    similar_band = lower_band
+                elif not upper_band.empty:
+                    similar_band = upper_band
+                else:
+                    similar_band = None
+                
+                if similar_band is not None:
+                    min_flux = similar_band['Min_Flux'].values[0]
+                else:
+                    min_flux = 1e-10  # Default fallback
+                
+                # Estimate errors for the new frequency
+                UB_err_mean, LB_err_mean = estimate_errors(data, freq)
+                estimates = pd.DataFrame([{
+                    'Frequency (Hz)': freq,
+                    'Instrument': 'Estimated',
+                    'UB_err_mean': UB_err_mean,
+                    'UB_err_var': np.nan,  # Assume no variance
+                    'LB_err_mean': LB_err_mean,
+                    'LB_err_var': np.nan,  # Assume no variance,
+                    'Min_Flux': min_flux  # Use Min_Flux from similar band
+                }])
+                data = pd.concat([data, estimates], ignore_index=True)
     
-    xray_min = 1e1
-    optical_min = 1e2
-    radio_min = 1e4
-    
-    # If frequencies are provided, filter by frequency and use all available instruments for those frequencies
-    if frequencies is not None:
-        filtered_data = data[data['Frequency (Hz)'].isin(frequencies)]
-    # If instruments are provided, filter by instrument and use all available frequencies for those instruments
-    elif instruments is not None:
+    # Filter the data for selected frequencies or instruments
+    if instruments:
         filtered_data = data[data['Instrument'].isin(instruments)]
     else:
         filtered_data = data
-
+    
     for _, row in filtered_data.iterrows():
         nu_value = row['Frequency (Hz)']
-        instrument = row['Instrument']
         UB_err_mean = row['UB_err_mean']
         UB_err_var = row['UB_err_var']
         LB_err_mean = row['LB_err_mean']
         LB_err_var = row['LB_err_var']
         Min_Flux = row['Min_Flux']
-        
-        # Determine the minimum time based on the frequency range
-        if nu_value > 10**16:
-            base_min_time = xray_min
-        elif 10**11 < nu_value <= 10**16:
-            base_min_time = optical_min
-        elif nu_value <= 10**11:
-            base_min_time = radio_min
-        else:
-            base_min_time = optical_min  # Default case
-        
-        # Apply Gaussian variation to the starting point
-        adjusted_min_time = abs(rng.normal(base_min_time, base_min_time * 0.2))  # 10% standard deviation
-        
-        # Generate time samples as a geometric progression starting from the adjusted time
-        samples_per_band = rng.integers(5, 30) if nu_value > 10**11 else rng.integers(2, 10)
-        t = np.geomspace(adjusted_min_time, time_max, samples_per_band)
+
+        # Generate time samples as a geometric progression
+        samples_per_band = rng.integers(5, 30)
+        t = np.geomspace(1e1, 1e10, samples_per_band)  # Example time range
 
         # Generate realistic time and flux values for each frequency and instrument
         for i in range(samples_per_band):
@@ -106,46 +147,24 @@ def generate_realistic_data(theta, data_file, frequencies=None, instruments=None
             flux_values.append(Flux([t[i], nu_value], thetaCore, log_n0, p, log_epsilon_e, log_epsilon_B, log_E0, thetaObs, xi_N, d_L, z)[0])             
             
             # Generate Flux and errors based on instrument
-            # Check if UB_err_var is NaN, and handle it accordingly
-            if np.isnan(UB_err_var):
-                UB_err.append(abs(rng.normal(UB_err_mean, 0.01)))
-            else:
-                UB_err.append(abs(rng.normal(UB_err_mean, UB_err_var)))
+            UB_err.append(abs(UB_err_mean) if np.isnan(UB_err_var) else abs(rng.normal(UB_err_mean, UB_err_var)))
+            LB_err.append(abs(LB_err_mean) if np.isnan(LB_err_var) else abs(rng.normal(LB_err_mean, LB_err_var)))
 
-            # Check if LB_err_var is NaN, and handle it accordingly
-            if np.isnan(LB_err_var):
-                LB_err.append(abs(rng.normal(LB_err_mean, 0.01)))
-            else:
-                LB_err.append(abs(rng.normal(LB_err_mean, LB_err_var)))
-            
-            apply_shift_up = rng.choice([True, False])  # Randomly choose whether to shift up or down
-
-            if apply_shift_up:
-                # Apply a positive shift based on UB_err
-                flux_values[-1] += flux_values[-1] * rng.normal(0, UB_err[-1])
-            else:
-                # Apply a negative shift based on LB_err
-                flux_values[-1] -= flux_values[-1] * rng.normal(0, LB_err[-1])
-            
-            # Adjust error bounds by the flux scale
-            UB_err[-1] = abs(UB_err[-1] * flux_values[-1])
-            LB_err[-1] = abs(LB_err[-1] * flux_values[-1])
-            
             # Apply flux cutoff if required
-            if (flux_values[-1] < Min_Flux) & (flux_cutoff==True):
+            if (flux_values[-1] < Min_Flux) & (flux_cutoff == True):
                 flux_values.pop()
                 time_values.pop()
                 freq_values.pop()
                 UB_err.pop()
                 LB_err.pop()
-            
+
     return time_values, freq_values, flux_values, UB_err, LB_err
 
 
 
 
 # Example of selecting frequencies and instruments
-selected_frequencies = [3000000000.0, 3400000000.0] 
+selected_frequencies = [2e14] 
 selected_instruments = ['Chandra']
 
 # Path to your input CSV file
@@ -241,7 +260,7 @@ optical_max_freq = 10**16
 
 # Generate the realistic data based on the selected frequencies or instruments
 time_values, freq_values, flux_values, UB_err, LB_err = generate_realistic_data(
-    frequencies=None, instruments=None, theta=theta, data_file=data_file, flux_cutoff=True
+    frequencies=selected_frequencies, instruments=None, theta=theta, data_file=data_file, flux_cutoff=True
 )
 
 # Introduce gaps for optical frequencies
