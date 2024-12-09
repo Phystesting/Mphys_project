@@ -1,4 +1,4 @@
-import sampler_v6 as splr
+import sampler_v7 as splr
 import numpy as np
 import afterglowpy as grb
 
@@ -32,11 +32,11 @@ if fit_type == 'GA':
 else:
     jet_type = grb.jet.TopHat
 # File location to generate the samples in
-filename = f'/data/PROJECTS/2024-25/cjc233/samples/{identifier}_{fit_type}_samples.h5'
+filename = f'/data/PROJECTS/2024-25/cjc233/samples/{identifier}T_{fit_type}_samples.h5'
 datafile = f'../../data_generation_v2/data/{identifier}_data.csv'
 # Unpack data
-time, freq, flux, UB_err, LB_err = np.genfromtxt(datafile,delimiter=',',skip_header=1,unpack=True)
-flux_err = LB_err, UB_err
+time, freq, flux, flux_err = np.genfromtxt(datafile,delimiter=',',skip_header=1,unpack=True)
+flux_err = flux_err, flux_err
 
 #result = splr.run_optimization([time_values,freq_values], flux_values, initial,fixed_params, flux_err, xi_N, d_L, z)
 

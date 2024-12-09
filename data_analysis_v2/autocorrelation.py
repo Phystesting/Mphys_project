@@ -53,7 +53,7 @@ def autocorr_new(y, c=5.0):
     window = auto_window(taus, c)
     return taus[window]
 
-identifier = "170817"  # Set your identifier here
+identifier = "990510"  # Set your identifier here
 fit_type = 'GA'
 
 file_path = f'/data/PROJECTS/2024-25/cjc233/samples/{identifier}_{fit_type}_samples.h5'
@@ -83,7 +83,7 @@ plt.ylim(ylim)
 plt.xlabel("number of samples, $N$")
 plt.ylabel(r"$\tau$ estimates")
 plt.legend(fontsize=14);
-auto_save = f'./graph/{identifier}_{fit_type}_ac.png'
+auto_save = f'./graph/{identifier}/{identifier}_{fit_type}_ac.png'
 plt.savefig(auto_save)
 
 

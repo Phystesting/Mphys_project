@@ -108,7 +108,7 @@ def log_prior(theta, param_names):
     thetaObs = param_dict.get("thetaObs")
     Gamma = (E0/(n0*mp*(c**5)))**(1./8.) #calculate lorentz factor at t = 1s
     
-    return -(np.exp((Gamma-1000)/200)+np.exp(-(Gamma-100)/10)) - (100*np.cos(thetaObs))  # discourages Lorentz values above 2000 and below 100 and encorages off axis jet predictions
+    return -(np.exp((Gamma-1000)/200)+np.exp(-(Gamma-100)/10)) - (50*np.cos(thetaObs))  # discourages Lorentz values above 2000 and below 100 and encorages off axis jet predictions
 
 
 def log_probability(theta, x, y, err_flux, param_names, fixed_params, xi_N, d_L, z, jet_type):

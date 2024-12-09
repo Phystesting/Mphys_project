@@ -4,29 +4,32 @@ import emcee
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize
 from scipy.optimize import curve_fit
-import sampler_v4 as splr
+import sampler_v6 as splr
 import os
 import h5py  # Import h5py for file access
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 
-identifier = '170817'
+identifier = '990510'
 fit_type = 'GA'
 
 # Define default values for all parameters (used if not included in the fit)
 default_params = {
     "thetaCore": 0.05,  # Example value (radians)
-    "n0": 0,        # cm^-3
+    "log_n0": 0,        # cm^-3
     "p": 2.33,          # Spectral index
-    "epsilon_e": -1.0,  # Fraction of energy in electrons
-    "epsilon_B": -4.0, # Fraction of energy in magnetic fields
-    "E0": 52.,       # Isotropic equivalent energy (erg)
+    "log_epsilon_e": -1.0,  # Fraction of energy in electrons
+    "log_epsilon_B": -4.0, # Fraction of energy in magnetic fields
+    "log_E0": 52.,       # Isotropic equivalent energy (erg)
     "thetaObs": 0.0,   # Observation angle (radians)
 }
-jet_type = grb.jet.Gaussian
+if fit_type == 'GA':
+    jet_type = grb.jet.Gaussian
+else:
+    jet_type = grb.jet.TopHat
 xi_N = 1.0
-d_L = 1.327e+26
-z = 0.099
+z = 1.619
+d_L = 3.76e28
 
 # Path to HDF5 file
 file_path = f'/data/PROJECTS/2024-25/cjc233/samples/{identifier}_{fit_type}_samples.h5'
@@ -83,30 +86,35 @@ for param, default_value in default_params.items():
         parameter_values[param] = default_value
 
 # Import observational data
-time, freq, flux, UB_err, LB_err = np.genfromtxt(f'../data_generation_v2/data/{identifier}_data.csv', delimiter=',', skip_header=1, unpack=True)
+time, freq, flux, flux_err = np.genfromtxt(f'../data_generation_v2/data/{identifier}_data.csv', delimiter=',', skip_header=1, unpack=True)
+UB_err = flux_err
+LB_err = flux_err
 flux_err = LB_err, UB_err
 
 t_uniform = np.geomspace(min(time), max(time), num=50)
 
-
 # Prepare the figure
 fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+
+# Find unique frequencies
+unique_freqs = np.unique(freq)
 
 # Generate a colormap for unique frequencies
 cmap = cm.get_cmap("viridis", len(unique_freqs))
 colors = cmap(np.linspace(0, 1, len(unique_freqs)))
 
-# Loop over each unique frequency
+# Plot data points and fit lines for each frequency
 for idx, nu_value in enumerate(unique_freqs):
+    # Filter data for the current frequency
     mask = freq == nu_value
     t_filtered = time[mask]
     flux_filtered = flux[mask]
     flux_err_filtered = LB_err[mask], UB_err[mask]
 
-    # Plot the observational data for this frequency
+    # Plot observational data for this frequency
     ax.errorbar(
         t_filtered, flux_filtered, yerr=flux_err_filtered,
-        fmt='.', color=colors[idx], label=f'Data: {nu_value:.2e} Hz'
+        fmt='.', color=colors[idx], label=f'{nu_value:.2e} Hz'
     )
 
 # Uniform grid for model
@@ -124,18 +132,17 @@ freq_uniform = np.array(freq_uniform)
 x_uniform = [t_uniform, freq_uniform]
 best = np.array(splr.Flux(x_uniform, **parameter_values, xi_N=xi_N, d_L=d_L, z=z, jet_type=jet_type))
 
-# Plot the best-fit model
+# Plot the best-fit model for each frequency
 for idx, nu_value in enumerate(unique_freqs):
     mask = freq_uniform == nu_value
     t_best_filtered = t_uniform[mask]
     best_filtered = best[mask]
 
     ax.plot(
-        t_best_filtered, best_filtered, '-', color=colors[idx],
-        label=f'Fit: {nu_value:.2e} Hz', zorder=1
+        t_best_filtered, best_filtered, '-', color=colors[idx]
     )
 
-# Draw random sample models for uncertainty visualization
+# Draw random sample models for uncertainty visualization (in gray)
 fraction = 0.01  # Fraction of samples to use (e.g., 10%)
 num_samples = int(len(flat_samples) * fraction)  # Compute the number of samples to use
 inds = np.random.choice(len(flat_samples), size=num_samples, replace=False)  # Randomly select indices
@@ -153,7 +160,7 @@ for ind in inds:
     y_sample = splr.Flux(x_uniform, **sample_values, xi_N=xi_N, d_L=d_L, z=z, jet_type=jet_type)
     y_sample = np.array(y_sample)
 
-    # Plot the sampled model for each frequency
+    # Plot the sampled model for each frequency (in gray)
     for idx, nu_value in enumerate(unique_freqs):
         mask = freq_uniform == nu_value
         t_sample_filtered = t_uniform[mask]
@@ -161,19 +168,39 @@ for ind in inds:
 
         ax.plot(
             t_sample_filtered, y_sample_filtered, alpha=0.1,
-            color=colors[idx], zorder=0
+            color='gray', zorder=0
         )
 
-# Add custom legend entries
-handles, labels = ax.get_legend_handles_labels()
-data_handles = [h for h, l in zip(handles, labels) if "Data" in l]
-fit_handles = [h for h, l in zip(handles, labels) if "Fit" in l]
-legend_handles = data_handles + fit_handles
+# Create a custom legend
+legend_labels = [
+    "Points: Observational Data",
+    "Lines: Best-Fit Model"
+]
+legend_colors = [
+    "black",  # General color for data points
+    "black"   # General color for fit lines
+]
 
+# Add individual frequency colors to legend
+for idx, nu_value in enumerate(unique_freqs):
+    legend_labels.append(f"{nu_value:.2e} Hz")
+    legend_colors.append(colors[idx])
+
+# Create proxy artists for the legend
+legend_handles = []
+# Add handles for general data and fit descriptions
+legend_handles.append(plt.Line2D([0], [0], color="black", marker='o', linestyle=''))
+legend_handles.append(plt.Line2D([0], [0], color="black", linestyle='-'))
+
+# Add handles for frequencies
+for color in colors:
+    legend_handles.append(plt.Line2D([0], [0], color=color, linestyle='-'))
+
+# Add the legend to the plot
 ax.legend(
-    legend_handles,
-    [f'Data: {l.split(":")[1].strip()}' if "Data" in l else f'Fit: {l.split(":")[1].strip()}' for l in labels],
-    title="Legend", loc="upper left", fontsize=10, title_fontsize=12
+    legend_handles, legend_labels,
+    title="Legend",
+    loc="upper left", fontsize=10, title_fontsize=12
 )
 
 # Add labels and save the figure
@@ -182,7 +209,6 @@ ax.set(
     xlabel=r"$t$ (s)", ylabel=r"$F_\nu$ (mJy)"
 )
 
-probable_plots_path = f'./graph/{identifier}_fits.png'
+probable_plots_path = f'./graph/{identifier}/{identifier}_{fit_type}_fits.png'
 fig.savefig(probable_plots_path)
 plt.close(fig)
-

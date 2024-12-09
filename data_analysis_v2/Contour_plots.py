@@ -3,12 +3,13 @@ import corner
 import matplotlib.pyplot as plt
 import os
 import emcee
+import h5py
 
 
-identifier = "170817"
-fit_type = 'GA'
+identifier = "990510"
+fit_type = 'TH'
 
-file_path = f'/data/PROJECTS/2024-25/cjc233/samples/{identifier}_{fit_type}_samples.h5'
+file_path = f'/data/PROJECTS/2024-25/cjc233/samples/{identifier}T2_{fit_type}_samples.h5'
 if not os.path.exists(file_path):
     raise FileNotFoundError(f"The HDF5 file '{file_path}' does not exist.")
 backend = emcee.backends.HDFBackend(file_path)
@@ -25,7 +26,7 @@ except emcee.autocorr.AutocorrError:
     burnin = len(reader.get_chain()) // 3  # Use some default burn-in, e.g., one-third of the chain length
     thin = 1  # No thinning
 
-with h5py.File(filename, "r") as f:
+with h5py.File(file_path, "r") as f:
     labels = f.attrs["param_names"]
 
 ndim = len(labels)
@@ -41,7 +42,7 @@ for i, ax in enumerate(axes):
 axes[-1].set_xlabel("step number")
 
 # Save the figure with the identifier
-sampling_plot_path = f'./graph/{identifier}_{fit_type}_steps.png'
+sampling_plot_path = f'./graph/{identifier}/{identifier}_{fit_type}_steps.png'
 fig.savefig(sampling_plot_path)
 plt.close(fig)
 
@@ -51,7 +52,7 @@ truth = None  # You can define truth values here if available
 fig2 = corner.corner(flat_samples, labels=labels, truths=truth)
 
 # Save the corner plot with the identifier
-corner_plot_path = f'./graph/{identifier}_{fit_type}_contour.png'
+corner_plot_path = f'./graph/{identifier}/{identifier}_{fit_type}_contour.png'
 fig2.savefig(corner_plot_path)
 plt.close(fig2)
 
