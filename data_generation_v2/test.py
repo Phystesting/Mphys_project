@@ -157,3 +157,6 @@ def generate_realistic_data(theta, data_file, frequencies=None, instruments=None
             
     return time_values, freq_values, flux_values, UB_err, LB_err
 
+
+
+

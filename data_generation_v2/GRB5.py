@@ -7,14 +7,14 @@ import fakedata_v6 as fd6
 import removedata_v0 as rd0
 
 # Initial parameters
-identifier = 'GRB1'
+identifier = 'GRB5'
 
 # Path to your input CSV file
 data_file = './data/combined_statistics.csv'
 
 log_E0 = 54
 thetaCore = 0.1
-thetaObs = 0.0
+thetaObs = 0.3
 log_n0 = 2.0
 p = 2.3
 log_epsilon_e = -1.0
