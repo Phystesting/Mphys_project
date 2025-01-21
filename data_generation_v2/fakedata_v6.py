@@ -44,7 +44,7 @@ def Flux(x, thetaCore, log_n0, p, log_epsilon_e, log_epsilon_B, log_E0, thetaObs
 # Function to generate realistic data
 def generate_realistic_data(theta, data_file, frequencies=None, instruments=None, flux_cutoff=True):
     time_min = -1
-    time_max = 1e10
+    time_max = 1e8
     # Unpack simulated GRB properties
     thetaCore, log_n0, p, log_epsilon_e, log_epsilon_B, log_E0, thetaObs, xi_N, d_L, z = theta
     # Load the input data from CSV file

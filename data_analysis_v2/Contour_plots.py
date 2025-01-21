@@ -6,10 +6,10 @@ import emcee
 import h5py
 
 
-identifier = "990510"
-fit_type = 'TH'
+identifier = "GRB2"
+fit_type = 'GA'
 
-file_path = f'/data/PROJECTS/2024-25/cjc233/samples/{identifier}T2_{fit_type}_samples.h5'
+file_path = f'/data/PROJECTS/2024-25/cjc233/samples/{identifier}_{fit_type}_samples.h5'
 if not os.path.exists(file_path):
     raise FileNotFoundError(f"The HDF5 file '{file_path}' does not exist.")
 backend = emcee.backends.HDFBackend(file_path)

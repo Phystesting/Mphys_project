@@ -20,7 +20,7 @@ initial = {
 
 # Define inputs
 identifier = '990510' # The GRB identifier
-fit_type = 'GA' # GA or TH for gaussian or tophat
+fit_type = 'TH' # GA or TH for gaussian or tophat
 z = 1.619
 d_L = 3.76e28
 xi_N = 1.0

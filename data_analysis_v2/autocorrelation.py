@@ -53,7 +53,7 @@ def autocorr_new(y, c=5.0):
     window = auto_window(taus, c)
     return taus[window]
 
-identifier = "990510"  # Set your identifier here
+identifier = "GRB2"  # Set your identifier here
 fit_type = 'GA'
 
 file_path = f'/data/PROJECTS/2024-25/cjc233/samples/{identifier}_{fit_type}_samples.h5'

@@ -61,7 +61,7 @@ def log_likelihood(theta, x, y, err_flux, param_names, fixed_params, xi_N, d_L, 
     # Calculate the model flux
     try:
         model = Flux(x, thetaCore, log_n0, p, log_epsilon_e, log_epsilon_B, log_E0, thetaObs, xi_N, d_L, z, jet_type)
-        #print(model)
+        #print(min(model))
         log_model = np.log(model)
         if not np.isfinite(log_model).all():
             raise ValueError("Model log-flux contains non-finite values.")
@@ -108,7 +108,7 @@ def log_prior(theta, param_names):
     thetaObs = param_dict.get("thetaObs")
     Gamma = (E0/(n0*mp*(c**5)))**(1./8.) #calculate lorentz factor at t = 1s
     
-    return -(np.exp((Gamma-1000)/200)+np.exp(-(Gamma-100)/10)) - (50*np.cos(thetaObs))  # discourages Lorentz values above 2000 and below 100 and encorages off axis jet predictions
+    return -(np.exp((Gamma-1000)/200)+np.exp(-(Gamma-100)/10))  # discourages Lorentz values above 2000 and below 100 and encorages off axis jet predictions
 
 
 def log_probability(theta, x, y, err_flux, param_names, fixed_params, xi_N, d_L, z, jet_type):
@@ -130,7 +130,7 @@ def run_optimization(x, y, initial, fixed_params, err_flux, xi_N, d_L, z, jet_ty
         "log_epsilon_e": (-5.0, 0.0),
         "log_epsilon_B": (-5.0, 0.0),
         "log_E0": (45.0, 57.0),
-        "thetaObs": (0.0, 0.8),
+        "thetaObs": (0.0, np.pi * 0.5),
     }
     fit_bounds = [bounds[param] for param in param_names]
 
